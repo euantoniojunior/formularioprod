@@ -1,64 +1,50 @@
 from flask import Flask, request, render_template, send_file
-import csv
+from flask_sqlalchemy import SQLAlchemy
 import os
-import re
 import pandas as pd
 from datetime import datetime
 import pytz
 
 app = Flask(__name__)
-CSV_FILE = 'inscricoes.csv'
-EXCEL_FILE = 'inscricoes.xlsx'
-HEADERS = ["ID", "Nome", "Email", "CPF", "Fone", "IP", "Data/Hora"]
 
-# Garante que o CSV existe e tem cabeçalho correto
-def ensure_csv_exists():
-    if not os.path.exists(CSV_FILE) or os.stat(CSV_FILE).st_size == 0:
-        with open(CSV_FILE, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(HEADERS)
+# Configuração do Banco de Dados (Render define DATABASE_URL como variável de ambiente)
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "spostgresql://antoniojunior:DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH@dpg-cv4vpslumphs73frdobg-a/formulario_1")  # Usa SQLite local se a variável não estiver definida
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Salva dados no CSV
-def save_to_csv(data):
-    ensure_csv_exists()
-    with open(CSV_FILE, mode='a', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(data)
+db = SQLAlchemy(app)
 
-# Gera ID único
-def gerar_id_unico():
-    ensure_csv_exists()
-    try:
-        with open(CSV_FILE, mode='r', encoding='utf-8') as file:
-            linhas = list(csv.reader(file))
-            return int(linhas[-1][0]) + 1 if len(linhas) > 1 else 1
-    except (ValueError, IndexError):
-        return 1
+# Modelo da Tabela Inscrições
+class Inscricao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    cpf = db.Column(db.String(11), nullable=False, unique=True)
+    fone = db.Column(db.String(20), nullable=False)
+    ip = db.Column(db.String(50), nullable=False)
+    data_hora = db.Column(db.String(50), nullable=False, default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S"))
+
+# Criação do banco de dados
+with app.app_context():
+    db.create_all()
 
 # Validação de CPF (11 dígitos numéricos)
 def validar_cpf(cpf):
-    cpf = re.sub(r'\D', '', cpf)
-    return len(cpf) == 11
+    return len("".join(filter(str.isdigit, cpf))) == 11
 
-# Lê registros do CSV
-def ler_csv():
-    ensure_csv_exists()
-    with open(CSV_FILE, mode='r', encoding='utf-8') as file:
-        return list(csv.reader(file))
-
-
-# Exporta os dados para um arquivo Excel com o cabeçalho correto e disponibiliza para download
+# Exportar os dados para um arquivo Excel
 @app.route('/baixar_excel')
 def baixar_excel():
-    registros = ler_csv()
+    registros = Inscricao.query.all()
     
-    if len(registros) > 1:  # Se houver registros além do cabeçalho
-        df = pd.DataFrame(registros[1:], columns=HEADERS)  # Usa sempre os HEADERS corretos
-        df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
-        return send_file(EXCEL_FILE, as_attachment=True)
-    
+    if registros:
+        data = [{"ID": r.id, "Nome": r.nome, "Email": r.email, "CPF": r.cpf, "Fone": r.fone, "IP": r.ip, "Data/Hora": r.data_hora} for r in registros]
+        df = pd.DataFrame(data)
+        excel_file = "inscricoes.xlsx"
+        df.to_excel(excel_file, index=False, engine="openpyxl")
+        return send_file(excel_file, as_attachment=True)
+
     return "Nenhum dado para exportar."
-    
+
 # Página inicial
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -73,37 +59,43 @@ def index():
             return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-        data_hora = datetime.now(pytz.timezone('America/Rio_Branco')).strftime('%Y-%m-%d %H:%M:%S')
-        save_to_csv([gerar_id_unico(), nome, email, cpf, fone, ip_usuario, data_hora])
+        data_hora = datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
+
+        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario, data_hora=data_hora)
+        db.session.add(nova_inscricao)
+        db.session.commit()
 
         return render_template('success.html')
+    
     return render_template('form.html')
 
 # Visualização e exclusão de registros
 @app.route('/visualizar', methods=['GET', 'POST'])
-def visualizar_csv():
+def visualizar_registros():
     if request.method == 'POST':
         if request.form.get('limpar_tudo'):
-            ensure_csv_exists()
-            with open(CSV_FILE, mode='w', newline='', encoding='utf-8') as file:
-                writer = csv.writer(file)
-                writer.writerow(HEADERS)
+            db.session.query(Inscricao).delete()
+            db.session.commit()
         elif request.form.get('excluir'):
-            linha_excluir = request.form.get('excluir')
-            registros = ler_csv()
-            with open(CSV_FILE, mode='w', newline='', encoding='utf-8') as file:
-                writer = csv.writer(file)
-                writer.writerow(HEADERS)
-                for linha in registros[1:]:
-                    if linha[0] != linha_excluir:
-                        writer.writerow(linha)
-        return render_template('visualizar.html', registros=ler_csv())
-    return render_template('visualizar.html', registros=ler_csv())
+            id_excluir = request.form.get('excluir')
+            Inscricao.query.filter_by(id=id_excluir).delete()
+            db.session.commit()
 
-# Rota para baixar o arquivo CSV
+    registros = Inscricao.query.all()
+    return render_template('visualizar.html', registros=registros)
+
+# Rota para baixar os dados em CSV
 @app.route('/download')
 def download_file():
-    return send_file(CSV_FILE, as_attachment=True)
+    registros = Inscricao.query.all()
+    csv_file = "inscricoes.csv"
+
+    with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
+        file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
+        for r in registros:
+            file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
+
+    return send_file(csv_file, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
