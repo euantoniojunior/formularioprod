@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, send_file
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 import os
 import pandas as pd
 from datetime import datetime
@@ -12,7 +13,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "spostgresql:/
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
-
+migrate = Migrate(app, db)  # Adiciona suporte a migrações
 # Modelo da Tabela Inscrições
 class Inscricao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
