@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Inscrições</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            width: 90%;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #00529B;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #F39200;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .actions {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #F39200;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #D17A00;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .action-buttons button {
+            width: 180px;
+        }
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px;
+                padding: 15px;
+            }
+            table, th, td {
+                font-size: 14px;
+            }
+            .action-buttons button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Visualizar Inscrições</h1>
+
+        <!-- Tabela de inscrições -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>CPF</th>
+                    <th>Fone</th>
+                    <th>IP</th>
+                    <th>Data/Hora</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registro in registros %}
+                <tr>
+                    <td>{{ registro[0] }}</td>
+                    <td>{{ registro[1] }}</td>
+                    <td>{{ registro[2] }}</td>
+                    <td>{{ registro[3] }}</td>
+                    <td>{{ registro[4] }}</td>
+                    <td>{{ registro[5] }}</td>
+                    <td>{{ registro[6] }}</td>
+                    <td>
+                        <form method="POST" action="/visualizar">
+                            <input type="hidden" name="excluir" value="{{ registro[0] }}">
+                            <button type="submit">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Botões de ação -->
+        <div class="actions">
+            <div class="action-buttons">
+                <form method="POST" action="/visualizar">
+                    <button type="submit" name="limpar_tudo">Limpar Todos</button>
+                </form>
+                <form method="GET" action="/download">
+                    <button type="submit">Baixar CSV</button>
+                </form>
+                <!-- Novo botão para baixar Excel -->
+                <form method="GET" action="/baixar_excel">
+                    <button type="submit">Baixar Excel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

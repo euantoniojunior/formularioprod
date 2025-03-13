@@ -1,0 +1,207 @@
+/* Resetando margens e padding padrão */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Configurações do corpo da página */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* Estilo do contêiner principal */
+.container {
+    background-color: #fff;
+    width: 90%;
+    max-width: 400px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+/* Estilo do logo */
+img {
+    width: 200px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+/* Estilo do título */
+h1 {
+    color: #00529B;
+    margin-bottom: 20px;
+}
+
+/* Estilo dos campos de entrada e botões */
+input, button {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+/* Estilo do botão */
+button {
+    background-color: #F39200;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background-color: #D17A00;
+}
+
+/* Estilo dos switches */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    left: 4px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* Estilo dos termos e política */
+.terms {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #555;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Estilo do modal */
+#termoModal {
+    display: none;
+    position: fixed;
+    z-index: 2;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding-top: 60px;
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: scale(0.9);
+    transition: transform 0.3s ease-in-out;
+    position: relative;
+}
+
+.modal-content h2 {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.modal-content p {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* Correção do botão de fechar */
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 5px 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.close:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* Animação para mostrar o modal */
+#termoModal.show {
+    display: block;
+    opacity: 1;
+}
+
+#termoModal.show .modal-content {
+    transform: scale(1);
+}
+
+/* Responsividade para telas pequenas */
+@media (max-width: 480px) {
+    .container {
+        padding: 15px;
+    }
+    h1 {
+        font-size: 20px;
+    }
+    input, button {
+        font-size: 14px;
+        padding: 10px;
+    }
+    img {
+        width: 150px;
+    }
+}
