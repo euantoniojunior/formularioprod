@@ -14,7 +14,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['SECRET_KEY'] = 'DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH'  # Necessário para usar o flash messages
 
-
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)  # Adiciona suporte a migrações
 
