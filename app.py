@@ -9,7 +9,7 @@ import pytz
 app = Flask(__name__)
 
 # Configuração do Banco de Dados (Render define DATABASE_URL como variável de ambiente)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://antoniojunior:DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH@dpg-cv4vpslumphs73frdobg-a/formulario_1")  # Usa SQLite local se a variável não estiver definida
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://antoniojunior:DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH@dpg-cv4vpslumphs73frdobg-a/formulario_1?sslmode=disable") # Usa SQLite local se a variável não estiver definida
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
