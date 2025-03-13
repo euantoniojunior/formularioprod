@@ -31,9 +31,19 @@ class Inscricao(db.Model):
 with app.app_context():
     db.create_all()
 
-# Validação de CPF (11 dígitos numéricos)
+# Validação de CPF (11 dígitos numéricos e um básico de validade)
 def validar_cpf(cpf):
-    return len("".join(filter(str.isdigit, cpf))) == 11
+    # Remove tudo o que não for número
+    cpf = "".join(filter(str.isdigit, cpf))
+    
+    if len(cpf) != 11:
+        return False
+
+    # Lógica básica de CPF (aqui pode ser inserida uma validação mais avançada)
+    if cpf == cpf[0] * 11:  # Não permite CPFs como 111.111.111-11
+        return False
+    
+    return True
 
 # Exportar os dados para um arquivo Excel
 @app.route('/baixar_excel')
@@ -60,7 +70,7 @@ def index():
         fone = request.form.get('fone')
 
         if not validar_cpf(cpf):
-            erro_cpf = "CPF deve ter 11 caracteres numéricos."
+            erro_cpf = "CPF deve ter 11 caracteres numéricos e ser válido."
             return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
