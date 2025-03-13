@@ -224,15 +224,6 @@
     </div>
 
     <script>
-        // Verificar tamanho do CPF quando o formulário for enviado
-        document.querySelector("form").addEventListener("submit", function(event) {
-            var cpf = document.getElementById("cpf").value;
-            if (cpf.length !== 11) {
-                alert("CPF deve ter 11 caracteres.");
-                event.preventDefault(); // Impede o envio do formulário
-            }
-        });
-
         // Modal
         var modal = document.getElementById('termoModal');
         var btn = document.getElementById('openTermo');
@@ -271,8 +262,8 @@
             }
         }
 
-        toggleTermoConsentimento.addEventListener("change", verificaConsentimentos);
-        togglePoliticaPrivacidade.addEventListener("change", verificaConsentimentos);
+        toggleTermoConsentimento.addEventListener('change', verificaConsentimentos);
+        togglePoliticaPrivacidade.addEventListener('change', verificaConsentimentos);
     </script>
 </body>
 </html>
