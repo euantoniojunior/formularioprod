@@ -1,89 +1,142 @@
-from flask import Flask, request, render_template, send_file
-import psycopg2
-from psycopg2 import sql
+from flask import Flask, request, render_template, send_file, flash, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+import os
+import pandas as pd
 from datetime import datetime
 import pytz
-import os
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 
-# Configuração do banco de dados no Render
-DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME', 'seu_banco'),
-    'user': os.getenv('DB_USER', 'seu_usuario'),
-    'password': os.getenv('DB_PASSWORD', 'sua_senha'),
-    'host': os.getenv('DB_HOST', 'seu_host'),
-    'port': os.getenv('DB_PORT', '5432')
-}
+# Configuração do Banco de Dados (Render define DATABASE_URL como variável de ambiente)
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://antoniojunior:DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH@dpg-cv4vpslumphs73frdobg-a/formulario_1?sslmode=disable") 
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SECRET_KEY'] = 'DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH'  # Necessário para usar o flash messages
 
-# Função para conectar ao banco de dados
-def get_db_connection():
-    return psycopg2.connect(**DB_CONFIG)
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)  # Adiciona suporte a migrações
 
-# Criar tabela caso não exista
-def create_table():
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS inscricoes (
-                    id SERIAL PRIMARY KEY,
-                    nome VARCHAR(255) NOT NULL,
-                    email VARCHAR(255) UNIQUE NOT NULL,
-                    ip VARCHAR(50),
-                    data_hora TIMESTAMP NOT NULL
-                )
-            ''')
-            conn.commit()
+# Modelo da Tabela Inscrições
+class Inscricao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    cpf = db.Column(db.String(11), nullable=False, unique=True)
+    fone = db.Column(db.String(20), nullable=False)
+    ip = db.Column(db.String(50), nullable=False)
+    data_hora = db.Column(db.String(50), nullable=False, default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S"))
 
-# Salvar dados no PostgreSQL
-def save_to_db(nome, email, ip_usuario):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('''
-                INSERT INTO inscricoes (nome, email, ip, data_hora)
-                VALUES (%s, %s, %s, %s)
-            ''', (nome, email, ip_usuario, datetime.now(pytz.timezone('America/Rio_Branco'))))
-            conn.commit()
+# Criação do banco de dados
+with app.app_context():
+    db.create_all()
 
-# Rota principal para formulário
+# Validação de CPF (11 dígitos numéricos e um básico de validade)
+def validar_cpf(cpf):
+    # Remove tudo o que não for número
+    cpf = "".join(filter(str.isdigit, cpf))
+    
+    if len(cpf) != 11:
+        return False
+
+    # Lógica básica de CPF (aqui pode ser inserida uma validação mais avançada)
+    if cpf == cpf[0] * 11:  # Não permite CPFs como 111.111.111-11
+        return False
+    
+    return True
+
+# Exportar os dados para um arquivo Excel
+@app.route('/baixar_excel')
+def baixar_excel():
+    registros = Inscricao.query.all()
+
+    if registros:
+        data = [{"ID": r.id, "Nome": r.nome, "Email": r.email, "CPF": r.cpf, "Fone": r.fone, "IP": r.ip, "Data/Hora": r.data_hora} for r in registros]
+        df = pd.DataFrame(data)
+        excel_file = "inscricoes.xlsx"
+        df.to_excel(excel_file, index=False, engine="openpyxl")
+        return send_file(excel_file, as_attachment=True)
+
+    flash("Nenhum dado para exportar.", "warning")
+    return redirect(url_for('index'))
+
+# Página inicial
+@app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         nome = request.form.get('nome')
         email = request.form.get('email')
-        ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr)
+        cpf = request.form.get('cpf')
+        fone = request.form.get('fone')
+
+        if not validar_cpf(cpf):
+            erro_cpf = "CPF deve ter 11 caracteres numéricos e ser válido."
+            return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
+
+        ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+        data_hora = datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
+
+        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario, data_hora=data_hora)
+
         try:
-            save_to_db(nome, email, ip_usuario)
+            db.session.add(nova_inscricao)
+            db.session.commit()
+            flash("Inscrição realizada com sucesso!", "success")
             return render_template('success.html')
-        except psycopg2.IntegrityError:
-            return render_template('form.html', erro="Email já cadastrado!"), 400
+        except IntegrityError:
+            db.session.rollback()
+            flash("Erro: CPF já cadastrado.", "danger")
+            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+
     return render_template('form.html')
 
-# Rota para resetar o banco de dados (limpa a tabela)
-@app.route('/reset_db', methods=['POST'])
-def reset_db():
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('DELETE FROM inscricoes')
-            conn.commit()
-    return "Banco de dados resetado com sucesso!"
+# Visualização e exclusão de registros
+@app.route('/visualizar', methods=['GET', 'POST'])
+def visualizar_registros():
+    if request.method == 'POST':
+        if request.form.get('limpar_tudo'):
+            db.session.query(Inscricao).delete()
+            db.session.commit()
+            flash("Todos os registros foram excluídos.", "success")
+        elif request.form.get('excluir'):
+            id_excluir = request.form.get('excluir')
+            Inscricao.query.filter_by(id=id_excluir).delete()
+            db.session.commit()
+            flash("Registro excluído com sucesso.", "success")
 
-# Rota para baixar os registros como CSV
+    registros = Inscricao.query.all()
+    return render_template('visualizar.html', registros=registros)
+
+# Rota para baixar os dados em CSV
 @app.route('/download')
 def download_file():
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('SELECT * FROM inscricoes')
-            registros = cur.fetchall()
-    
-    # Criar arquivo temporário CSV
-    csv_file = 'inscricoes.csv'
-    with open(csv_file, mode='w', newline='', encoding='utf-8') as file:
-        file.write('ID,Nome,Email,IP,Data/Hora\n')
-        for row in registros:
-            file.write(','.join(map(str, row)) + '\n')
-    
-    return send_file(csv_file, as_attachment=True)
+    registros = Inscricao.query.all()
+    csv_file = "inscricoes.csv"
+
+    if registros:
+        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
+            file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
+            for r in registros:
+                file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
+
+        return send_file(csv_file, as_attachment=True)
+
+    flash("Nenhum dado disponível para exportação.", "warning")
+    return redirect(url_for('index'))
+
+# Rota para limpar todas as tabelas (Excluir todos os registros da tabela Inscricao)
+@app.route('/limpar_tabelas', methods=['POST'])
+def limpar_tabelas():
+    try:
+        # Apaga todos os registros da tabela 'Inscricao'
+        db.session.query(Inscricao).delete()
+        db.session.commit()
+        flash("Todas as tabelas foram limpas com sucesso.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao limpar as tabelas: {e}", "danger")
+
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    create_table()
     app.run(debug=True, host='0.0.0.0', port=5000)
