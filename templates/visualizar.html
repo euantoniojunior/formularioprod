@@ -100,16 +100,16 @@
             <tbody>
                 {% for registro in registros %}
                 <tr>
-                    <td>{{ registro[0] }}</td>
-                    <td>{{ registro[1] }}</td>
-                    <td>{{ registro[2] }}</td>
-                    <td>{{ registro[3] }}</td>
-                    <td>{{ registro[4] }}</td>
-                    <td>{{ registro[5] }}</td>
-                    <td>{{ registro[6] }}</td>
+                    <td>{{ registro.id }}</td>
+                    <td>{{ registro.nome }}</td>
+                    <td>{{ registro.email }}</td>
+                    <td>{{ registro.cpf }}</td>
+                    <td>{{ registro.fone }}</td>
+                    <td>{{ registro.ip }}</td>
+                    <td>{{ registro.data_hora }}</td>
                     <td>
                         <form method="POST" action="/visualizar">
-                            <input type="hidden" name="excluir" value="{{ registro[0] }}">
+                            <input type="hidden" name="excluir" value="{{ registro.id }}">
                             <button type="submit">Excluir</button>
                         </form>
                     </td>
@@ -121,13 +121,17 @@
         <!-- Botões de ação -->
         <div class="actions">
             <div class="action-buttons">
+                <!-- Formulário para limpar todos os registros -->
                 <form method="POST" action="/visualizar">
-                    <button type="submit" name="limpar_tudo">Limpar Todos</button>
+                    <button type="submit" name="limpar_tudo" value="true">Limpar Todos</button>
                 </form>
+                
+                <!-- Formulário para baixar CSV -->
                 <form method="GET" action="/download">
                     <button type="submit">Baixar CSV</button>
                 </form>
-                <!-- Novo botão para baixar Excel -->
+
+                <!-- Formulário para baixar Excel -->
                 <form method="GET" action="/baixar_excel">
                     <button type="submit">Baixar Excel</button>
                 </form>
