@@ -37,13 +37,16 @@
             border-radius: 5px;
             font-size: 16px;
         }
-        .form-control.is-invalid {
+
+        /* Estilo para campo inválido */
+        .is-invalid {
             border-color: #dc3545;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5 8.2 8.6h-.4L6 5.7 3.8 3.6z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right 8px center;
             background-size: 16px 16px;
         }
+
         .invalid-feedback {
             color: #dc3545;
             font-size: 14px;
@@ -51,7 +54,9 @@
             margin-left: 5px;
             display: block;
         }
+
         button {
+            width: 100%;
             background-color: #F39200;
             color: white;
             cursor: pointer;
@@ -70,6 +75,7 @@
             opacity: 0.3;
             cursor: not-allowed;
         }
+
         .switch-container {
             display: flex;
             align-items: center;
@@ -207,11 +213,12 @@
     <h1>Inscreva-se no Evento</h1>
 
     <form method="POST">
+        <!-- Campos do formulário -->
         <input type="text" name="nome" placeholder="Nome Completo" value="{{ nome }}" required>
+
         <input type="email" name="email" placeholder="E-mail" value="{{ email }}" required>
 
-        <!-- Campo CPF com feedback -->
-        <input type="text" name="cpf" id="cpf" placeholder="CPF (Digite apenas os números)" value="{{ cpf }}" required minlength="11" maxlength="11" class="form-control {% if erro_cpf %}is-invalid{% endif %}">
+        <input type="text" name="cpf" id="cpf" placeholder="CPF (Digite apenas os números)" value="{{ cpf }}" required minlength="11" maxlength="11" class="{% if erro_cpf %}is-invalid{% endif %}">
         {% if erro_cpf %}
             <div class="invalid-feedback">{{ erro_cpf }}</div>
         {% endif %}
@@ -244,48 +251,48 @@
     </form>
 </div>
 
-<!-- Modal -->
+<!-- Modal Termo -->
 <div id="termoModal">
     <div class="modal-content">
         <span class="close">&times;</span>
         <h2>Termo de Consentimento</h2>
         <p>
             Os dados que você nos fornecer por este espaço serão utilizados para possibilitar o seu cadastro e sua participação em ações extensivas e eventos similares. Após a confirmação do envio dos dados, o Senac registrará dados de IP e geolocalização, apenas no momento do evento, do dispositivo utilizado para o cadastro para fins de comprovação de participação no evento.
-            Caso não esteja de acordo, não envie seus dados. Porém, informamos que não será possível dar prosseguimento a operação em questão sem o consentimento para o tratamento dos dados pessoais.
+            Caso não esteja de acordo, não envie seus dados. Porém, informamos que não será possível dar prosseguimento à operação sem o consentimento para o tratamento dos dados pessoais.
         </p>
     </div>
 </div>
 
 <script>
-    // Modal
-    var modal = document.getElementById('termoModal');
-    var btn = document.getElementById('openTermo');
-    var span = document.getElementsByClassName('close')[0];
+    // Modal Termo
+    const modal = document.getElementById('termoModal');
+    const btn = document.getElementById('openTermo');
+    const span = document.getElementsByClassName('close')[0];
 
-    btn.onclick = function() {
+    btn.onclick = function () {
         modal.style.display = "block";
         modal.style.opacity = 1;
     }
 
-    span.onclick = function() {
+    span.onclick = function () {
         modal.style.display = "none";
         modal.style.opacity = 0;
     }
 
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         if (event.target == modal) {
             modal.style.display = "none";
             modal.style.opacity = 0;
         }
     }
 
-    // Verificar se ambos os toggles estão ativados para habilitar o botão
-    var toggleTermoConsentimento = document.getElementById("toggleTermoConsentimento");
-    var togglePoliticaPrivacidade = document.getElementById("togglePoliticaPrivacidade");
-    var submitBtn = document.getElementById("submitBtn");
+    // Botão Enviar só ativo se os termos forem aceitos
+    const toggleTermo = document.getElementById("toggleTermoConsentimento");
+    const togglePrivacidade = document.getElementById("togglePoliticaPrivacidade");
+    const submitBtn = document.getElementById("submitBtn");
 
-    function verificaConsentimentos() {
-        if (toggleTermoConsentimento.checked && togglePoliticaPrivacidade.checked) {
+    function verificarCheckboxes() {
+        if (toggleTermo.checked && togglePrivacidade.checked) {
             submitBtn.disabled = false;
             submitBtn.style.opacity = 1;
             submitBtn.style.backgroundColor = "#F39200";
@@ -296,8 +303,8 @@
         }
     }
 
-    toggleTermoConsentimento.addEventListener('change', verificaConsentimentos);
-    togglePoliticaPrivacidade.addEventListener('change', verificaConsentimentos);
+    toggleTermo.addEventListener('change', verificarCheckboxes);
+    togglePrivacidade.addEventListener('change', verificarCheckboxes);
 </script>
 
 </body>
