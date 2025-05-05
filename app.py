@@ -8,12 +8,11 @@ import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 
-# Carrega variáveis de .flaskenv ou .env
 load_dotenv()
 
 app = Flask(__name__)
 
-# Carrega DATABASE_URL e corrige se necessário
+# Configuração do Banco de Dados
 uri = os.getenv("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -27,6 +26,7 @@ migrate = Migrate(app, db)
 
 # Modelo da Tabela Inscrições
 class Inscricao(db.Model):
+    __tablename__ = 'inscricao'  # opcional, mas garante consistência
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False)
@@ -39,6 +39,10 @@ class Inscricao(db.Model):
         default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
     )
 
+
+# Garantir que as tabelas sejam criadas no início
+with app.app_context():
+    db.create_all()
 
 # Validação de CPF com dígitos verificadores
 def validar_cpf(cpf):
