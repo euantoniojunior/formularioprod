@@ -2,268 +2,50 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscrição - SENAC</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            text-align: center;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            background-color: #ffffff;
-            width: 90%;
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-        }
-        h1 {
-            color: #00529B;
-            margin-bottom: 20px;
-        }
-        img {
-            width: 100px;
-            margin-bottom: 20px;
-        }
-        input, button {
-            width: calc(100% - 20px);
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        button {
-            background-color: #F39200;
-            color: white;
-            cursor: pointer;
-            border: none;
-            opacity: 0.6;
-            transition: opacity 0.3s ease, background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #D17A00;
-        }
-        button:enabled {
-            opacity: 1;
-        }
-        button:disabled {
-            background-color: #f1a500;
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-        .switch-container {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-            justify-content: flex-start;
-        }
-        .switch-container label {
-            font-size: 14px;
-            color: #555;
-            margin-right: 10px;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 40px;
-            height: 20px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            left: 4px;
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-        }
-        input:checked + .slider {
-            background-color: #4CAF50;
-        }
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-
-        /* Modal */
-        #termoModal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-            padding-top: 60px;
-            transition: opacity 0.4s ease-in-out;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 12px;
-            animation: modal-in 0.5s ease-out;
-        }
-        @keyframes modal-in {
-            from {
-                transform: scale(0.7);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        .close {
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        @media (max-width: 480px) {
-            .container {
-                margin: 30px auto;
-                padding: 15px;
-            }
-            input, button {
-                font-size: 14px;
-                padding: 10px;
-            }
-            .switch {
-                width: 50px;
-                height: 25px;
-            }
-            .slider:before {
-                height: 20px;
-                width: 20px;
-                bottom: 2px;
-            }
-        }
-    </style>
+    <title>Inscrição</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <img src="{{ url_for('static', filename='senac-logo.png') }}" alt="Logo SENAC">
-        <h1>Inscreva-se no Evento</h1>
-        <form method="POST">
-            <input type="text" name="nome" placeholder="Nome Completo" value="{{ nome }}" required>
-            <input type="email" name="email" placeholder="E-mail" value="{{ email }}" required>
-            <input type="text" name="cpf" id="cpf" placeholder="CPF (Digite apenas os números)" value="{{ cpf }}" required minlength="11" maxlength="11">
-            <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required>
-            
-            <!-- Termo de Consentimento -->
-            <div class="switch-container">
-                <label for="toggleTermoConsentimento">
-                    <p>Eu aceito os <a href="#" id="openTermo">Termos de Consentimento</a></p>
-                </label>
-                <label class="switch">
-                    <input type="checkbox" id="toggleTermoConsentimento" required {{ 'checked' if toggleTermoConsentimento else '' }}>
-                    <span class="slider"></span>
-                </label>
-            </div>
-            
-            <!-- Política de Privacidade -->
-            <div class="switch-container">
-                <label for="togglePoliticaPrivacidade">
-                    <p>Eu aceito a <a href="https://portal.ac.senac.br/aviso-privacidade" target="_blank">Política de Privacidade</a></p>
-                </label>
-                <label class="switch">
-                    <input type="checkbox" id="togglePoliticaPrivacidade" required {{ 'checked' if togglePoliticaPrivacidade else '' }}>
-                    <span class="slider"></span>
-                </label>
-            </div>
+<body class="container mt-5">
 
-            <button type="submit" id="submitBtn" disabled>Enviar Inscrição</button>
-        </form>
+<h2 class="mb-4">Formulário de Inscrição</h2>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<form method="post">
+    <div class="mb-3">
+        <label for="nome" class="form-label">Nome completo:</label>
+        <input type="text" class="form-control" id="nome" name="nome" value="{{ nome }}" required>
     </div>
 
-    <!-- Modal -->
-    <div id="termoModal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Termo de Consentimento</h2>
-            <p>
-                Os dados que você nos fornecer por este espaço serão utilizados para possibilitar o seu cadastro e sua participação em ações extensivas e eventos similares. Após a confirmação do envio dos dados, o Senac registrará dados de IP e geolocalização, apenas no momento do evento, do dispositivo utilizado para o cadastro para fins de comprovação de participação no evento.
-                Caso não esteja de acordo, não envie seus dados. Porém, informamos que não será possível dar prosseguimento a operação em questão sem o consentimento para o tratamento dos dados pessoais.
-            </p>
-        </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Email:</label>
+        <input type="email" class="form-control" id="email" name="email" value="{{ email }}" required>
     </div>
 
-    <script>
-        // Modal
-        var modal = document.getElementById('termoModal');
-        var btn = document.getElementById('openTermo');
-        var span = document.getElementsByClassName('close')[0];
+    <div class="mb-3">
+        <label for="cpf" class="form-label">CPF:</label>
+        <input type="text" class="form-control {% if erro_cpf %}is-invalid{% endif %}" id="cpf" name="cpf" value="{{ cpf }}" required>
+        {% if erro_cpf %}
+            <div class="invalid-feedback">{{ erro_cpf }}</div>
+        {% endif %}
+    </div>
 
-        btn.onclick = function() {
-            modal.style.display = "block";
-            modal.style.opacity = 1; 
-        }
+    <div class="mb-3">
+        <label for="fone" class="form-label">Telefone:</label>
+        <input type="text" class="form-control" id="fone" name="fone" value="{{ fone }}" required>
+    </div>
 
-        span.onclick = function() {
-            modal.style.display = "none";
-            modal.style.opacity = 0;
-        }
+    <button type="submit" class="btn btn-primary">Enviar</button>
+</form>
 
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-                modal.style.opacity = 0;
-            }
-        }
-
-        // Verificar se ambos os toggles estão ativados para habilitar o botão
-        var toggleTermoConsentimento = document.getElementById("toggleTermoConsentimento");
-        var togglePoliticaPrivacidade = document.getElementById("togglePoliticaPrivacidade");
-        var submitBtn = document.getElementById("submitBtn");
-
-        function verificaConsentimentos() {
-            if (toggleTermoConsentimento.checked && togglePoliticaPrivacidade.checked) {
-                submitBtn.disabled = false;
-                submitBtn.style.opacity = 1;
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.style.opacity = 0.3;
-                submitBtn.style.backgroundColor = "#f1a500";
-            }
-        }
-
-        toggleTermoConsentimento.addEventListener('change', verificaConsentimentos);
-        togglePoliticaPrivacidade.addEventListener('change', verificaConsentimentos);
-    </script>
 </body>
 </html>
