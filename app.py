@@ -1,21 +1,29 @@
+import os
 from flask import Flask, request, render_template, send_file, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-import os
 import pandas as pd
 from datetime import datetime
 import pytz
 from sqlalchemy.exc import IntegrityError
+from dotenv import load_dotenv
+
+# Carrega variáveis de .flaskenv ou .env
+load_dotenv()
 
 app = Flask(__name__)
 
-# Configuração do Banco de Dados (Render define DATABASE_URL como variável de ambiente)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://antoniojunior:DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH@dpg-cv4vpslumphs73frdobg-a/formulario_1?sslmode=disable") 
+# Carrega DATABASE_URL e corrige se necessário
+uri = os.getenv("DATABASE_URL")
+if uri and uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config['SECRET_KEY'] = 'DbEBtCnwzPOgh8yAjVa8CIvSif2EnPUH'  # Necessário para usar o flash messages
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)  # Adiciona suporte a migrações
+migrate = Migrate(app, db)
+
 
 # Modelo da Tabela Inscrições
 class Inscricao(db.Model):
@@ -25,33 +33,46 @@ class Inscricao(db.Model):
     cpf = db.Column(db.String(11), nullable=False, unique=True)
     fone = db.Column(db.String(20), nullable=False)
     ip = db.Column(db.String(50), nullable=False)
-    data_hora = db.Column(db.String(50), nullable=False, default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S"))
+    data_hora = db.Column(
+        db.String(50),
+        nullable=False,
+        default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
+    )
 
-# Criação do banco de dados
-with app.app_context():
-    db.create_all()
 
-# Validação de CPF (11 dígitos numéricos e um básico de validade)
+# Validação de CPF com dígitos verificadores
 def validar_cpf(cpf):
-    # Remove tudo o que não for número
-    cpf = "".join(filter(str.isdigit, cpf))
-    
-    if len(cpf) != 11:
+    cpf = ''.join(filter(str.isdigit, cpf))
+    if len(cpf) != 11 or cpf == cpf[0] * 11:
         return False
 
-    # Lógica básica de CPF (aqui pode ser inserida uma validação mais avançada)
-    if cpf == cpf[0] * 11:  # Não permite CPFs como 111.111.111-11
-        return False
-    
-    return True
+    # Cálculo do primeiro dígito
+    soma = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    resto = (soma * 10) % 11
+    digito1 = resto if resto < 10 else 0
+
+    # Cálculo do segundo dígito
+    soma = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    resto = (soma * 10) % 11
+    digito2 = resto if resto < 10 else 0
+
+    return cpf[-2:] == f"{digito1}{digito2}"
+
 
 # Exportar os dados para um arquivo Excel
 @app.route('/baixar_excel')
 def baixar_excel():
     registros = Inscricao.query.all()
-
     if registros:
-        data = [{"ID": r.id, "Nome": r.nome, "Email": r.email, "CPF": r.cpf, "Fone": r.fone, "IP": r.ip, "Data/Hora": r.data_hora} for r in registros]
+        data = [{
+            "ID": r.id,
+            "Nome": r.nome,
+            "Email": r.email,
+            "CPF": r.cpf,
+            "Fone": r.fone,
+            "IP": r.ip,
+            "Data/Hora": r.data_hora
+        } for r in registros]
         df = pd.DataFrame(data)
         excel_file = "inscricoes.xlsx"
         df.to_excel(excel_file, index=False, engine="openpyxl")
@@ -59,6 +80,7 @@ def baixar_excel():
 
     flash("Nenhum dado para exportar.", "warning")
     return redirect(url_for('index'))
+
 
 # Página inicial
 @app.route('/', methods=['GET', 'POST'])
@@ -70,13 +92,17 @@ def index():
         fone = request.form.get('fone')
 
         if not validar_cpf(cpf):
-            erro_cpf = "CPF deve ter 11 caracteres numéricos e ser válido."
+            erro_cpf = "CPF inválido. Deve ter 11 dígitos numéricos válidos."
             return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-        data_hora = datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
-
-        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario, data_hora=data_hora)
+        nova_inscricao = Inscricao(
+            nome=nome,
+            email=email,
+            cpf=cpf,
+            fone=fone,
+            ip=ip_usuario
+        )
 
         try:
             db.session.add(nova_inscricao)
@@ -89,6 +115,7 @@ def index():
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
 
     return render_template('form.html')
+
 
 # Visualização e exclusão de registros
 @app.route('/visualizar', methods=['GET', 'POST'])
@@ -107,6 +134,7 @@ def visualizar_registros():
     registros = Inscricao.query.all()
     return render_template('visualizar.html', registros=registros)
 
+
 # Rota para baixar os dados em CSV
 @app.route('/download')
 def download_file():
@@ -124,11 +152,11 @@ def download_file():
     flash("Nenhum dado disponível para exportação.", "warning")
     return redirect(url_for('index'))
 
-# Rota para limpar todas as tabelas (Excluir todos os registros da tabela Inscricao)
+
+# Rota para limpar todas as tabelas
 @app.route('/limpar_tabelas', methods=['POST'])
 def limpar_tabelas():
     try:
-        # Apaga todos os registros da tabela 'Inscricao'
         db.session.query(Inscricao).delete()
         db.session.commit()
         flash("Todas as tabelas foram limpas com sucesso.", "success")
@@ -138,5 +166,6 @@ def limpar_tabelas():
 
     return redirect(url_for('index'))
 
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
