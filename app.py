@@ -8,25 +8,29 @@ import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 
+# Carrega variáveis de ambiente do .flaskenv (para desenvolvimento local)
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configuração do Banco de Dados
+# Configuração do Banco de Dados com SSL automático
 uri = os.getenv("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
+if uri and "?sslmode=" not in uri:
+    uri += "?sslmode=require"
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
+# Inicializa o banco e migrações
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
 # Modelo da Tabela Inscrições
 class Inscricao(db.Model):
-    __tablename__ = 'inscricao'  # opcional, mas garante consistência
+    __tablename__ = 'inscricao'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False)
@@ -40,22 +44,18 @@ class Inscricao(db.Model):
     )
 
 
-# Garantir que as tabelas sejam criadas no início
-with app.app_context():
-    db.create_all()
-
-# Validação de CPF com dígitos verificadores
+# Função de validação de CPF com dígitos verificadores
 def validar_cpf(cpf):
     cpf = ''.join(filter(str.isdigit, cpf))
     if len(cpf) != 11 or cpf == cpf[0] * 11:
         return False
 
-    # Cálculo do primeiro dígito
+    # Cálculo do primeiro dígito verificador
     soma = sum(int(cpf[i]) * (10 - i) for i in range(9))
     resto = (soma * 10) % 11
     digito1 = resto if resto < 10 else 0
 
-    # Cálculo do segundo dígito
+    # Cálculo do segundo dígito verificador
     soma = sum(int(cpf[i]) * (11 - i) for i in range(10))
     resto = (soma * 10) % 11
     digito2 = resto if resto < 10 else 0
@@ -63,7 +63,12 @@ def validar_cpf(cpf):
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
-# Exportar os dados para um arquivo Excel
+# Garante que a tabela seja criada ao iniciar a aplicação
+with app.app_context():
+    db.create_all()
+
+
+# Exporta dados para Excel
 @app.route('/baixar_excel')
 def baixar_excel():
     registros = Inscricao.query.all()
@@ -86,7 +91,7 @@ def baixar_excel():
     return redirect(url_for('index'))
 
 
-# Página inicial
+# Página inicial com formulário
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -121,7 +126,7 @@ def index():
     return render_template('form.html')
 
 
-# Visualização e exclusão de registros
+# Visualização dos registros
 @app.route('/visualizar', methods=['GET', 'POST'])
 def visualizar_registros():
     if request.method == 'POST':
@@ -139,7 +144,7 @@ def visualizar_registros():
     return render_template('visualizar.html', registros=registros)
 
 
-# Rota para baixar os dados em CSV
+# Exporta dados para CSV
 @app.route('/download')
 def download_file():
     registros = Inscricao.query.all()
@@ -171,5 +176,6 @@ def limpar_tabelas():
     return redirect(url_for('index'))
 
 
+# Roda a aplicação
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
