@@ -13,12 +13,14 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Configuração do Banco de Dados com SSL automático
+# Configuração do Banco de Dados SEM SSL
 uri = os.getenv("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
-if uri and "?sslmode=" not in uri:
-    uri += "?sslmode=require"
+if uri and "?sslmode=" in uri:
+    # Remove parâmetro sslmode da URL
+    uri = uri.split("?")[0]
+
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
