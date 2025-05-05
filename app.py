@@ -5,22 +5,20 @@ from flask_migrate import Migrate
 import pandas as pd
 from datetime import datetime
 import pytz
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente do .flaskenv (para desenvolvimento local)
+# Carrega variáveis de ambiente do .flaskenv (apenas para desenvolvimento local)
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configuração do Banco de Dados SEM SSL
+# Configuração do Banco de Dados com SSL automático
 uri = os.getenv("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
-if uri and "?sslmode=" in uri:
-    # Remove parâmetro sslmode da URL
-    uri = uri.split("?")[0]
-
+if uri and "?sslmode=" not in uri:
+    uri += "?sslmode=require"
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
@@ -102,11 +100,20 @@ def index():
         cpf = request.form.get('cpf')
         fone = request.form.get('fone')
 
+        # Validação dos campos obrigatórios
+        if not nome or not email or not cpf or not fone:
+            flash("⚠️ Todos os campos são obrigatórios.", "danger")
+            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+
+        # Validação do CPF
         if not validar_cpf(cpf):
-            erro_cpf = "CPF inválido. Deve ter 11 dígitos numéricos válidos."
+            erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos numéricos válidos."
             return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
 
+        # Coleta IP do usuário
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+
+        # Cria nova inscrição
         nova_inscricao = Inscricao(
             nome=nome,
             email=email,
@@ -118,11 +125,25 @@ def index():
         try:
             db.session.add(nova_inscricao)
             db.session.commit()
-            flash("Inscrição realizada com sucesso!", "success")
+            flash("✅ Inscrição realizada com sucesso!", "success")
             return render_template('success.html')
-        except IntegrityError:
+
+        except IntegrityError as e:
             db.session.rollback()
-            flash("Erro: CPF já cadastrado.", "danger")
+            if "cpf" in str(e.orig).lower():
+                flash("❌ Erro: Este CPF já está cadastrado.", "danger")
+            else:
+                flash("❌ Erro ao salvar os dados. Tente novamente mais tarde.", "danger")
+            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"⚠️ Erro no banco de dados: {str(e)}", "danger")
+            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+
+        except Exception as e:
+            db.session.rollback()
+            flash("⚠️ Ocorreu um erro inesperado. Tente novamente.", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
 
     return render_template('form.html')
