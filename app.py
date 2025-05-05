@@ -5,15 +5,18 @@ from flask_migrate import Migrate
 import pandas as pd
 from datetime import datetime
 import pytz
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+import sqlite3  # Apenas para evitar conflito no Render
 
-# Carrega variáveis de ambiente do .flaskenv (apenas para desenvolvimento local)
+# Carrega variáveis de ambiente
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configuração do Banco de Dados com SSL automático
+# Configuração do Banco de Dados com SSL obrigatório
 uri = os.getenv("DATABASE_URL")
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -26,6 +29,17 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev'
 # Inicializa o banco e migrações
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+# Força SSL nas conexões ao PostgreSQL
+@event.listens_for(Engine, "connect")
+def set_ssl_mode(dbapi_connection, connection_record):
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        return
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("SET sslmode='require'")
+    finally:
+        cursor.close()
 
 
 # Modelo da Tabela Inscrições
@@ -50,12 +64,10 @@ def validar_cpf(cpf):
     if len(cpf) != 11 or cpf == cpf[0] * 11:
         return False
 
-    # Cálculo do primeiro dígito verificador
     soma = sum(int(cpf[i]) * (10 - i) for i in range(9))
     resto = (soma * 10) % 11
     digito1 = resto if resto < 10 else 0
 
-    # Cálculo do segundo dígito verificador
     soma = sum(int(cpf[i]) * (11 - i) for i in range(10))
     resto = (soma * 10) % 11
     digito2 = resto if resto < 10 else 0
@@ -100,53 +112,40 @@ def index():
         cpf = request.form.get('cpf')
         fone = request.form.get('fone')
 
-        # Validação dos campos obrigatórios
         if not nome or not email or not cpf or not fone:
             flash("⚠️ Todos os campos são obrigatórios.", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
 
-        # Validação do CPF
         if not validar_cpf(cpf):
-            erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos numéricos válidos."
+            erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos válidos."
             return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
 
-        # Coleta IP do usuário
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-
-        # Cria nova inscrição
-        nova_inscricao = Inscricao(
-            nome=nome,
-            email=email,
-            cpf=cpf,
-            fone=fone,
-            ip=ip_usuario
-        )
+        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario)
 
         try:
             db.session.add(nova_inscricao)
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
-            return render_template('success.html')
+            return redirect(url_for('success'))
 
-        except IntegrityError as e:
+        except IntegrityError:
             db.session.rollback()
-            if "cpf" in str(e.orig).lower():
-                flash("❌ Erro: Este CPF já está cadastrado.", "danger")
-            else:
-                flash("❌ Erro ao salvar os dados. Tente novamente mais tarde.", "danger")
-            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
-
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash(f"⚠️ Erro no banco de dados: {str(e)}", "danger")
+            flash("❌ Erro: Este CPF já está cadastrado.", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
 
         except Exception as e:
             db.session.rollback()
-            flash("⚠️ Ocorreu um erro inesperado. Tente novamente.", "danger")
+            flash("⚠️ Erro ao salvar os dados. Tente novamente mais tarde.", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
 
     return render_template('form.html')
+
+
+# Página de sucesso
+@app.route('/sucesso')
+def success():
+    return render_template('success.html')
 
 
 # Visualização dos registros
@@ -178,14 +177,13 @@ def download_file():
             file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
             for r in registros:
                 file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
-
         return send_file(csv_file, as_attachment=True)
 
     flash("Nenhum dado disponível para exportação.", "warning")
     return redirect(url_for('index'))
 
 
-# Rota para limpar todas as tabelas
+# Limpa todos os registros
 @app.route('/limpar_tabelas', methods=['POST'])
 def limpar_tabelas():
     try:
