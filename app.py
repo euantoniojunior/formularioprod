@@ -1,37 +1,34 @@
 import os
-import re
-from datetime import datetime
-import pytz
-import pandas as pd
 from flask import Flask, request, render_template, send_file, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+import pandas as pd
+from datetime import datetime
+import pytz
+from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
-import sqlite3  # Apenas para evitar erro no Render
 
-# Carrega variáveis de ambiente
+# Carrega variáveis de ambiente (para desenvolvimento local)
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Detecta automaticamente o tipo de banco e configura SSL se necessário
+# Configuração do Banco de Dados com detecção automática
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# Adiciona sslmode=require somente se for um banco remoto
-if uri.startswith("postgresql://") and "localhost" not in uri:
-    if "?sslmode=" not in uri:
+# Adiciona sslmode=require apenas se for PostgreSQL remoto
+if uri.startswith("postgresql://") and "?sslmode=" not in uri:
+    if "localhost" not in uri and "127.0.0.1" not in uri:
         uri += "?sslmode=require"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Inicializa o banco
+# Inicializa o banco e migrações
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
@@ -74,35 +71,38 @@ with app.app_context():
     db.create_all()
 
 
-# Rota principal com formulário
+# Página inicial com formulário
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         nome = request.form.get('nome')
         email = request.form.get('email')
-        cpf = request.form.get('cpf').replace('.', '').replace('-', '')
+        cpf = request.form.get('cpf')
         fone = request.form.get('fone')
 
         if not nome or not email or not cpf or not fone:
             flash("⚠️ Todos os campos são obrigatórios.", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
 
-        if not validar_cpf(cpf):
+        cpf_limpo = ''.join(filter(str.isdigit, cpf))
+        if not validar_cpf(cpf_limpo):
             erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos válidos."
             return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario)
+        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf_limpo, fone=fone, ip=ip_usuario)
 
         try:
             db.session.add(nova_inscricao)
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
             return redirect(url_for('success'))
+
         except IntegrityError:
             db.session.rollback()
             flash("❌ Erro: Este CPF já está cadastrado.", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+
         except Exception as e:
             db.session.rollback()
             flash(f"⚠️ Erro ao salvar os dados: {str(e)}", "danger")
@@ -135,7 +135,7 @@ def visualizar_registros():
     return render_template('visualizar.html', registros=registros)
 
 
-# Baixar dados como Excel
+# Exportar para Excel
 @app.route('/baixar_excel')
 def baixar_excel():
     registros = Inscricao.query.all()
@@ -158,7 +158,7 @@ def baixar_excel():
     return redirect(url_for('index'))
 
 
-# Baixar dados como CSV
+# Exportar para CSV
 @app.route('/download')
 def download_file():
     registros = Inscricao.query.all()
@@ -189,7 +189,7 @@ def limpar_tabelas():
     return redirect(url_for('index'))
 
 
-# Faz backup dos dados periodicamente (exemplo manual)
+# Faz backup dos dados em CSV
 @app.route('/backup')
 def backup_dados():
     registros = Inscricao.query.all()
