@@ -8,7 +8,7 @@ import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente
+# Carrega variáveis de ambiente do .flaskenv (apenas para desenvolvimento local)
 load_dotenv()
 
 app = Flask(__name__)
@@ -20,7 +20,7 @@ uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# Adiciona sslmode=require apenas se for PostgreSQL remoto
+# Adiciona ?sslmode=require apenas se for PostgreSQL remoto
 if uri.startswith("postgresql://") and "?sslmode=" not in uri:
     if "localhost" not in uri and "127.0.0.1" not in uri:
         uri += "?sslmode=require"
@@ -129,6 +129,30 @@ def index():
     return render_template('form.html')
 
 
+# Página de sucesso
+@app.route('/sucesso')
+def success():
+    return render_template('success.html')
+
+
+# Visualizar todos os registros
+@app.route('/visualizar', methods=['GET', 'POST'])
+def visualizar_registros():
+    if request.method == 'POST':
+        if request.form.get('limpar_tudo'):
+            db.session.query(Inscricao).delete()
+            db.session.commit()
+            flash("Todos os registros foram excluídos.", "success")
+        elif request.form.get('excluir'):
+            id_excluir = request.form.get('excluir')
+            Inscricao.query.filter_by(id=id_excluir).delete()
+            db.session.commit()
+            flash("Registro excluído com sucesso.", "success")
+
+    registros = Inscricao.query.all()
+    return render_template('visualizar.html', registros=registros)
+
+
 # Exportar para Excel
 @app.route('/baixar_excel')
 def baixar_excel():
@@ -177,24 +201,6 @@ def download_file():
     except Exception as e:
         flash("⚠️ Erro ao gerar arquivo. Tente novamente.", "danger")
         return redirect(url_for('index'))
-
-
-# Visualizar todos os registros
-@app.route('/visualizar', methods=['GET', 'POST'])
-def visualizar_registros():
-    if request.method == 'POST':
-        if request.form.get('limpar_tudo'):
-            db.session.query(Inscricao).delete()
-            db.session.commit()
-            flash("Todos os registros foram excluídos.", "success")
-        elif request.form.get('excluir'):
-            id_excluir = request.form.get('excluir')
-            Inscricao.query.filter_by(id=id_excluir).delete()
-            db.session.commit()
-            flash("Registro excluído com sucesso.", "success")
-
-    registros = Inscricao.query.all()
-    return render_template('visualizar.html', registros=registros)
 
 
 # Limpa todas as tabelas
