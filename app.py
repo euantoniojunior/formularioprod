@@ -87,9 +87,7 @@ def index():
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone,
-                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
-                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
+                                   fone=fone)
 
         # Validação do CPF
         if not validar_cpf(cpf):
@@ -99,9 +97,7 @@ def index():
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone,
-                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
-                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
+                                   fone=fone)
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
         nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario)
@@ -119,9 +115,7 @@ def index():
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone,
-                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
-                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
+                                   fone=fone)
 
         except Exception as e:
             db.session.rollback()
@@ -130,9 +124,7 @@ def index():
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone,
-                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
-                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
+                                   fone=fone)
 
     return render_template('form.html')
 
@@ -164,41 +156,51 @@ def visualizar_registros():
 # Exportar para Excel
 @app.route('/baixar_excel')
 def baixar_excel():
-    registros = Inscricao.query.all()
-    if registros:
-        data = [{
-            "ID": r.id,
-            "Nome": r.nome,
-            "Email": r.email,
-            "CPF": r.cpf,
-            "Fone": r.fone,
-            "IP": r.ip,
-            "Data/Hora": r.data_hora
-        } for r in registros]
-        df = pd.DataFrame(data)
-        excel_file = "inscricoes.xlsx"
-        df.to_excel(excel_file, index=False, engine="openpyxl")
-        return send_file(excel_file, as_attachment=True)
+    try:
+        registros = Inscricao.query.all()
+        if registros:
+            data = [{
+                "ID": r.id,
+                "Nome": r.nome,
+                "Email": r.email,
+                "CPF": r.cpf,
+                "Fone": r.fone,
+                "IP": r.ip,
+                "Data/Hora": r.data_hora
+            } for r in registros]
+            df = pd.DataFrame(data)
+            excel_file = "inscricoes.xlsx"
+            df.to_excel(excel_file, index=False, engine="openpyxl")
+            return send_file(excel_file, as_attachment=True)
 
-    flash("Nenhum dado disponível para exportação.", "warning")
-    return redirect(url_for('index'))
+        flash("Nenhum dado disponível para exportação.", "warning")
+        return redirect(url_for('index'))
+
+    except Exception as e:
+        flash("⚠️ Erro ao acessar os dados. Tente novamente mais tarde.", "danger")
+        return redirect(url_for('index'))
 
 
 # Exportar para CSV
 @app.route('/download')
 def download_file():
-    registros = Inscricao.query.all()
-    csv_file = "inscricoes.csv"
+    try:
+        registros = Inscricao.query.all()
+        csv_file = "inscricoes.csv"
 
-    if registros:
-        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-            file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
-            for r in registros:
-                file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
-        return send_file(csv_file, as_attachment=True)
+        if registros:
+            with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
+                file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
+                for r in registros:
+                    file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
+            return send_file(csv_file, as_attachment=True)
 
-    flash("Nenhum dado disponível para exportação.", "warning")
-    return redirect(url_for('index'))
+        flash("Nenhum dado disponível para exportação.", "warning")
+        return redirect(url_for('index'))
+
+    except Exception as e:
+        flash("⚠️ Erro ao gerar arquivo. Tente novamente.", "danger")
+        return redirect(url_for('index'))
 
 
 # Limpa todas as tabelas
@@ -211,26 +213,7 @@ def limpar_tabelas():
     except Exception as e:
         db.session.rollback()
         flash(f"Erro ao limpar as tabelas: {e}", "danger")
-
     return redirect(url_for('index'))
-
-
-# Faz backup dos dados em CSV
-@app.route('/backup')
-def backup_dados():
-    registros = Inscricao.query.all()
-    csv_file = "backup_inscricoes.csv"
-
-    if registros:
-        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-            file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
-            for r in registros:
-                file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
-        flash("💾 Backup realizado com sucesso: `backup_inscricoes.csv`", "success")
-    else:
-        flash("Nenhum dado encontrado para backup.", "warning")
-
-    return redirect(url_for('visualizar_registros'))
 
 
 # Roda a aplicação
