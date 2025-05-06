@@ -8,12 +8,13 @@ import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente (para desenvolvimento local)
+# Carrega variáveis de ambiente
 load_dotenv()
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Configuração do Banco de Dados com detecção automática
+# Configuração do Banco de Dados
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 
 if uri.startswith("postgres://"):
@@ -26,9 +27,8 @@ if uri.startswith("postgresql://") and "?sslmode=" not in uri:
 
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Inicializa o banco e migrações
+# Inicializa o banco
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
@@ -77,20 +77,34 @@ def index():
     if request.method == 'POST':
         nome = request.form.get('nome')
         email = request.form.get('email')
-        cpf = request.form.get('cpf')
+        cpf = request.form.get('cpf').replace('.', '').replace('-', '')
         fone = request.form.get('fone')
 
+        # Validação dos campos obrigatórios
         if not nome or not email or not cpf or not fone:
             flash("⚠️ Todos os campos são obrigatórios.", "danger")
-            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+            return render_template('form.html',
+                                   nome=nome,
+                                   email=email,
+                                   cpf=cpf,
+                                   fone=fone,
+                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
+                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
 
-        cpf_limpo = ''.join(filter(str.isdigit, cpf))
-        if not validar_cpf(cpf_limpo):
+        # Validação do CPF
+        if not validar_cpf(cpf):
             erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos válidos."
-            return render_template('form.html', erro_cpf=erro_cpf, nome=nome, email=email, cpf=cpf, fone=fone)
+            return render_template('form.html',
+                                   erro_cpf=erro_cpf,
+                                   nome=nome,
+                                   email=email,
+                                   cpf=cpf,
+                                   fone=fone,
+                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
+                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf_limpo, fone=fone, ip=ip_usuario)
+        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario)
 
         try:
             db.session.add(nova_inscricao)
@@ -101,12 +115,24 @@ def index():
         except IntegrityError:
             db.session.rollback()
             flash("❌ Erro: Este CPF já está cadastrado.", "danger")
-            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+            return render_template('form.html',
+                                   nome=nome,
+                                   email=email,
+                                   cpf=cpf,
+                                   fone=fone,
+                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
+                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
 
         except Exception as e:
             db.session.rollback()
             flash(f"⚠️ Erro ao salvar os dados: {str(e)}", "danger")
-            return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
+            return render_template('form.html',
+                                   nome=nome,
+                                   email=email,
+                                   cpf=cpf,
+                                   fone=fone,
+                                   toggleTermoConsentimento=request.form.get('toggleTermoConsentimento'),
+                                   togglePoliticaPrivacidade=request.form.get('togglePoliticaPrivacidade'))
 
     return render_template('form.html')
 
