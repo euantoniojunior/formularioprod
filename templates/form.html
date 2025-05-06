@@ -21,62 +21,6 @@
             padding: 20px;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
-            position: relative;
-        }
-
-        .alert {
-            width: calc(100% - 40px);
-            max-width: 380px;
-            margin: 10px auto;
-            padding: 12px 16px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            animation: fadeInDown 0.4s ease-out;
-        }
-
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-warning {
-            background-color: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-        }
-
-        .alert .icon {
-            margin-right: 10px;
-        }
-
-        .alert .message {
-            flex: 1;
-        }
-
-        .alert .close-btn {
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-15px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         h1 {
@@ -158,12 +102,6 @@
             height: 20px;
         }
 
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
         .slider {
             position: absolute;
             cursor: pointer;
@@ -196,16 +134,29 @@
             transform: translateX(20px);
         }
 
-        /* Modal */
+        /* Modal de Termo */
         #termoModal {
             display: none;
             position: fixed;
-            z-index: 1;
+            z-index: 9999;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
+            background-color: rgba(0, 0, 0, 0.6);
+            padding-top: 60px;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        #feedbackModal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
             padding-top: 60px;
             transition: opacity 0.4s ease-in-out;
         }
@@ -228,18 +179,29 @@
 
         .close {
             color: #aaa;
-            font-size: 28px;
+            float: right;
+            font-size: 24px;
             font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 20px;
+            cursor: pointer;
         }
 
         .close:hover,
         .close:focus {
             color: black;
             text-decoration: none;
-            cursor: pointer;
+        }
+
+        .message-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .danger {
+            color: #721c24;
+        }
+
+        .success {
+            color: #155724;
         }
 
         @media (max-width: 480px) {
@@ -267,18 +229,14 @@
 </head>
 <body>
 
-<!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }}">
-        <span class="icon">⚠️</span>
-        <span class="message">{{ message }}</span>
-        <span class="close-btn" onclick="this.parentElement.remove()">✖️</span>
-      </div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+<!-- Flash Messages como Modais -->
+<div id="feedbackModal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="document.getElementById('feedbackModal').style.display='none'">&times;</span>
+        <p id="feedbackMessage" class="message-title danger"></p>
+        <button onclick="document.getElementById('feedbackModal').style.display='none'" style="padding:10px 20px; background:#28a745; color:white; border:none; border-radius:4px;">OK</button>
+    </div>
+</div>
 
 <div class="container">
     <img src="{{ url_for('static', filename='senac-logo.png') }}" alt="Logo SENAC">
@@ -319,10 +277,10 @@
     </form>
 </div>
 
-<!-- Modal -->
+<!-- Modal Termo -->
 <div id="termoModal">
     <div class="modal-content">
-        <span class="close">&times;</span>
+        <span class="close" onclick="document.getElementById('termoModal').style.display='none'">&times;</span>
         <h2>Termo de Consentimento</h2>
         <p>
             Os dados que você nos fornecer por este espaço serão utilizados para possibilitar o seu cadastro e sua participação em ações extensivas e eventos similares.
@@ -333,26 +291,36 @@
 </div>
 
 <script>
-    // Modal
-    var modal = document.getElementById('termoModal');
-    var btn = document.getElementById('openTermo');
-    var span = document.getElementsByClassName('close')[0];
-
-    btn.onclick = function () {
-        modal.style.display = "block";
-        modal.style.opacity = 1;
+    // Mostra feedback via modal
+    function mostrarFeedback(mensagem, tipo = "danger") {
+        const modal = document.getElementById('feedbackModal');
+        const msgElement = document.getElementById('feedbackMessage');
+        msgElement.className = 'message-title ' + tipo;
+        msgElement.textContent = mensagem;
+        modal.style.display = 'block';
     }
 
-    span.onclick = function () {
-        modal.style.display = "none";
-        modal.style.opacity = 0;
+    // Verifica se há flash message pra mostrar no modal
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          window.onload = function() {
+              mostrarFeedback("{{ message }}", "{{ category }}");
+          };
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    // Modal Termo
+    var btnTermo = document.getElementById('openTermo');
+    var modalTermo = document.getElementById('termoModal');
+
+    btnTermo.onclick = function () {
+        modalTermo.style.display = "block";
     }
 
-    window.onclick = function (event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
-            modal.style.opacity = 0;
-        }
+    document.querySelector('#termoModal .close').onclick = function () {
+        modalTermo.style.display = "none";
     }
 
     // Botão Enviar só ativo se os termos forem aceitos
