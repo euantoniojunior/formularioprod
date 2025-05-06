@@ -169,7 +169,6 @@
             text-decoration: none;
             cursor: pointer;
         }
-
         @media (max-width: 480px) {
             .container {
                 margin: 30px auto;
@@ -206,6 +205,7 @@
 <div class="container">
     <img src="{{ url_for('static', filename='senac-logo.png') }}" alt="Logo SENAC">
     <h1>Inscreva-se no Evento</h1>
+
     <form method="POST">
         <input type="text" name="nome" placeholder="Nome Completo" value="{{ nome }}" required>
         <input type="email" name="email" placeholder="E-mail" value="{{ email }}" required>
@@ -213,7 +213,7 @@
         {% if erro_cpf %}
             <div class="invalid-feedback">{{ erro_cpf }}</div>
         {% endif %}
-        <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required>
+        <input type="text" name="fone" id="telefone" placeholder="Telefone" value="{{ fone }}" required>
 
         <!-- Termo de Consentimento -->
         <div class="switch-container">
