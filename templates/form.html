@@ -51,6 +51,7 @@
     </style>
 </head>
 <body>
+
 <div class="container">
     <h2>Formulário de Inscrição</h2>
 
@@ -66,12 +67,11 @@
     <form method="POST">
         <input type="text" name="nome" placeholder="Nome completo" value="{{ nome }}" required>
         <input type="email" name="email" placeholder="E-mail" value="{{ email }}" required>
-        <input type="text" name="cpf" id="cpf" placeholder="CPF (somente números)" value="{{ cpf }}" required minlength="11" maxlength="14">
+        <input type="text" name="cpf" id="cpf" placeholder="CPF (somente números)" value="{{ cpf }}" required minlength="11" maxlength="11">
         {% if erro_cpf %}
             <div class="invalid-feedback">{{ erro_cpf }}</div>
         {% endif %}
         <input type="text" name="fone" id="telefone" placeholder="Telefone" value="{{ fone }}" required>
-
         <button type="submit">Enviar</button>
     </form>
 </div>
@@ -89,13 +89,13 @@
 
     // Máscara de Telefone
     document.getElementById("telefone").addEventListener("input", function (e) {
-        let v = e.target.value;
-        v = v.replace(/\D/g, '');
+        let v = e.target.value.replace(/\D/g, '');
         v = v.replace(/^(\d{0,2})/, '($1)');
-        v = v.replace(/(\)$|(?=\))([0-9]{0,5})/, '$1$2');
+        v = v.replace(/(\)$|(?=\))(.{0,5})/, '$1$2');
         v = v.replace(/(.{3})(.{1,3})-(.{1,4})/, '$1 $2-$3');
         e.target.value = v;
     });
 </script>
+
 </body>
 </html>
