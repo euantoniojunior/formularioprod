@@ -106,7 +106,7 @@ def index():
             db.session.add(nova_inscricao)
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
-            return redirect(url_for('success'))
+            return redirect(url_for('index'))
 
         except IntegrityError:
             db.session.rollback()
@@ -127,30 +127,6 @@ def index():
                                    fone=fone)
 
     return render_template('form.html')
-
-
-# Página de sucesso
-@app.route('/sucesso')
-def success():
-    return render_template('success.html')
-
-
-# Visualizar todos os registros
-@app.route('/visualizar', methods=['GET', 'POST'])
-def visualizar_registros():
-    if request.method == 'POST':
-        if request.form.get('limpar_tudo'):
-            db.session.query(Inscricao).delete()
-            db.session.commit()
-            flash("Todos os registros foram excluídos.", "success")
-        elif request.form.get('excluir'):
-            id_excluir = request.form.get('excluir')
-            Inscricao.query.filter_by(id=id_excluir).delete()
-            db.session.commit()
-            flash("Registro excluído com sucesso.", "success")
-
-    registros = Inscricao.query.all()
-    return render_template('visualizar.html', registros=registros)
 
 
 # Exportar para Excel
@@ -201,6 +177,24 @@ def download_file():
     except Exception as e:
         flash("⚠️ Erro ao gerar arquivo. Tente novamente.", "danger")
         return redirect(url_for('index'))
+
+
+# Visualizar todos os registros
+@app.route('/visualizar', methods=['GET', 'POST'])
+def visualizar_registros():
+    if request.method == 'POST':
+        if request.form.get('limpar_tudo'):
+            db.session.query(Inscricao).delete()
+            db.session.commit()
+            flash("Todos os registros foram excluídos.", "success")
+        elif request.form.get('excluir'):
+            id_excluir = request.form.get('excluir')
+            Inscricao.query.filter_by(id=id_excluir).delete()
+            db.session.commit()
+            flash("Registro excluído com sucesso.", "success")
+
+    registros = Inscricao.query.all()
+    return render_template('visualizar.html', registros=registros)
 
 
 # Limpa todas as tabelas
