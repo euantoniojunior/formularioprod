@@ -1,45 +1,39 @@
 import os
+import re
+from datetime import datetime
+import pytz
+import pandas as pd
 from flask import Flask, request, render_template, send_file, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-import pandas as pd
-from datetime import datetime
-import pytz
-from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-import sqlite3  # Apenas para evitar conflito no Render
+import sqlite3  # Apenas para evitar erro no Render
 
 # Carrega variáveis de ambiente
 load_dotenv()
 
 app = Flask(__name__)
-
-# Configuração do Banco de Dados com SSL obrigatório
-uri = os.getenv("DATABASE_URL")
-if uri and uri.startswith("postgres://"):
-    uri = uri.replace("postgres://", "postgresql://", 1)
-if uri and "?sslmode=" not in uri:
-    uri += "?sslmode=require"
-app.config["SQLALCHEMY_DATABASE_URI"] = uri
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Inicializa o banco e migrações
+# Detecta automaticamente o tipo de banco e configura SSL se necessário
+uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
+
+if uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+
+# Adiciona sslmode=require somente se for um banco remoto
+if uri.startswith("postgresql://") and "localhost" not in uri:
+    if "?sslmode=" not in uri:
+        uri += "?sslmode=require"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = uri
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Inicializa o banco
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-
-# Força SSL nas conexões ao PostgreSQL
-@event.listens_for(Engine, "connect")
-def set_ssl_mode(dbapi_connection, connection_record):
-    if isinstance(dbapi_connection, sqlite3.Connection):
-        return
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("SET sslmode='require'")
-    finally:
-        cursor.close()
 
 
 # Modelo da Tabela Inscrições
@@ -80,36 +74,13 @@ with app.app_context():
     db.create_all()
 
 
-# Exporta dados para Excel
-@app.route('/baixar_excel')
-def baixar_excel():
-    registros = Inscricao.query.all()
-    if registros:
-        data = [{
-            "ID": r.id,
-            "Nome": r.nome,
-            "Email": r.email,
-            "CPF": r.cpf,
-            "Fone": r.fone,
-            "IP": r.ip,
-            "Data/Hora": r.data_hora
-        } for r in registros]
-        df = pd.DataFrame(data)
-        excel_file = "inscricoes.xlsx"
-        df.to_excel(excel_file, index=False, engine="openpyxl")
-        return send_file(excel_file, as_attachment=True)
-
-    flash("Nenhum dado para exportar.", "warning")
-    return redirect(url_for('index'))
-
-
-# Página inicial com formulário
+# Rota principal com formulário
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         nome = request.form.get('nome')
         email = request.form.get('email')
-        cpf = request.form.get('cpf')
+        cpf = request.form.get('cpf').replace('.', '').replace('-', '')
         fone = request.form.get('fone')
 
         if not nome or not email or not cpf or not fone:
@@ -128,15 +99,13 @@ def index():
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
             return redirect(url_for('success'))
-
         except IntegrityError:
             db.session.rollback()
             flash("❌ Erro: Este CPF já está cadastrado.", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
-
         except Exception as e:
             db.session.rollback()
-            flash("⚠️ Erro ao salvar os dados. Tente novamente mais tarde.", "danger")
+            flash(f"⚠️ Erro ao salvar os dados: {str(e)}", "danger")
             return render_template('form.html', nome=nome, email=email, cpf=cpf, fone=fone)
 
     return render_template('form.html')
@@ -148,7 +117,7 @@ def success():
     return render_template('success.html')
 
 
-# Visualização dos registros
+# Visualizar todos os registros
 @app.route('/visualizar', methods=['GET', 'POST'])
 def visualizar_registros():
     if request.method == 'POST':
@@ -166,7 +135,30 @@ def visualizar_registros():
     return render_template('visualizar.html', registros=registros)
 
 
-# Exporta dados para CSV
+# Baixar dados como Excel
+@app.route('/baixar_excel')
+def baixar_excel():
+    registros = Inscricao.query.all()
+    if registros:
+        data = [{
+            "ID": r.id,
+            "Nome": r.nome,
+            "Email": r.email,
+            "CPF": r.cpf,
+            "Fone": r.fone,
+            "IP": r.ip,
+            "Data/Hora": r.data_hora
+        } for r in registros]
+        df = pd.DataFrame(data)
+        excel_file = "inscricoes.xlsx"
+        df.to_excel(excel_file, index=False, engine="openpyxl")
+        return send_file(excel_file, as_attachment=True)
+
+    flash("Nenhum dado disponível para exportação.", "warning")
+    return redirect(url_for('index'))
+
+
+# Baixar dados como CSV
 @app.route('/download')
 def download_file():
     registros = Inscricao.query.all()
@@ -183,7 +175,7 @@ def download_file():
     return redirect(url_for('index'))
 
 
-# Limpa todos os registros
+# Limpa todas as tabelas
 @app.route('/limpar_tabelas', methods=['POST'])
 def limpar_tabelas():
     try:
@@ -197,6 +189,25 @@ def limpar_tabelas():
     return redirect(url_for('index'))
 
 
+# Faz backup dos dados periodicamente (exemplo manual)
+@app.route('/backup')
+def backup_dados():
+    registros = Inscricao.query.all()
+    csv_file = "backup_inscricoes.csv"
+
+    if registros:
+        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
+            file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
+            for r in registros:
+                file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
+        flash("💾 Backup realizado com sucesso: `backup_inscricoes.csv`", "success")
+    else:
+        flash("Nenhum dado encontrado para backup.", "warning")
+
+    return redirect(url_for('visualizar_registros'))
+
+
 # Roda a aplicação
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
