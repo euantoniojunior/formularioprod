@@ -146,8 +146,14 @@
             animation: modal-in 0.5s ease-out;
         }
         @keyframes modal-in {
-            from { transform: scale(0.7); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            from {
+                transform: scale(0.7);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
         .close {
             color: #aaa;
@@ -200,7 +206,6 @@
 <div class="container">
     <img src="{{ url_for('static', filename='senac-logo.png') }}" alt="Logo SENAC">
     <h1>Inscreva-se no Evento</h1>
-
     <form method="POST">
         <input type="text" name="nome" placeholder="Nome Completo" value="{{ nome }}" required>
         <input type="email" name="email" placeholder="E-mail" value="{{ email }}" required>
