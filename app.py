@@ -8,7 +8,6 @@ import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente
 load_dotenv()
 
 app = Flask(__name__)
@@ -20,7 +19,6 @@ uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
-# Adiciona ?sslmode=require apenas para bancos remotos
 if uri.startswith("postgresql://") and "?sslmode=" not in uri:
     if "localhost" not in uri and "127.0.0.1" not in uri:
         uri += "?sslmode=require"
@@ -71,7 +69,7 @@ with app.app_context():
     db.create_all()
 
 
-# Página inicial com formulário
+# Rota principal com formulário
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -80,7 +78,6 @@ def index():
         cpf = request.form.get('cpf').replace('.', '').replace('-', '')
         fone = request.form.get('fone')
 
-        # Validação dos campos obrigatórios
         if not nome or not email or not cpf or not fone:
             flash("⚠️ Todos os campos são obrigatórios.", "danger")
             return render_template('form.html',
@@ -89,7 +86,6 @@ def index():
                                    cpf=cpf,
                                    fone=fone)
 
-        # Validação do CPF
         if not validar_cpf(cpf):
             erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos válidos."
             return render_template('form.html',
@@ -179,7 +175,7 @@ def download_file():
         return redirect(url_for('index'))
 
 
-# Visualizar todos os registros
+# Visualizar registros
 @app.route('/visualizar', methods=['GET', 'POST'])
 def visualizar_registros():
     if request.method == 'POST':
@@ -197,7 +193,7 @@ def visualizar_registros():
     return render_template('visualizar.html', registros=registros)
 
 
-# Limpa todas as tabelas
+# Limpa tabelas
 @app.route('/limpar_tabelas', methods=['POST'])
 def limpar_tabelas():
     try:
