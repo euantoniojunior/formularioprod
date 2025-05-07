@@ -26,8 +26,7 @@
             margin-bottom: 20px;
         }
         img {
-            width: 130px; /* Logo aumentado */
-            max-width: 90%; /* Para manter proporcional em dispositivos pequenos */
+            width: 130px; /* Logo aumentada */
             height: auto;
             margin-bottom: 20px;
         }
@@ -87,8 +86,13 @@
         .switch {
             position: relative;
             display: inline-block;
-            width: 40px;
-            height: 20px;
+            width: 50px;
+            height: 25px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
         .slider {
             position: absolute;
@@ -104,10 +108,10 @@
         .slider:before {
             position: absolute;
             content: "";
-            height: 16px;
-            width: 16px;
+            height: 18px;
+            width: 18px;
             border-radius: 50%;
-            left: 4px;
+            left: 3px;
             bottom: 2px;
             background-color: white;
             transition: .4s;
@@ -116,83 +120,72 @@
             background-color: #4CAF50;
         }
         input:checked + .slider:before {
-            transform: translateX(20px);
+            transform: translateX(24px);
         }
 
-        /* Modal */
-        #termoModal {
+        /* Modal de Mensagem */
+        #mensagemModal {
             display: none;
             position: fixed;
-            z-index: 1;
+            z-index: 9999;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
+            background-color: rgba(0,0,0,0.6);
             padding-top: 60px;
-            transition: opacity 0.4s ease-in-out;
         }
-        .modal-content {
+        .modal-mensagem {
             background-color: #fefefe;
-            margin: 5% auto;
+            margin: 10% auto;
             padding: 20px;
             border: 1px solid #888;
             width: 80%;
-            max-width: 500px;
+            max-width: 400px;
             border-radius: 12px;
-            animation: modal-in 0.5s ease-out;
+            animation: modal-in 0.4s ease-out;
         }
         @keyframes modal-in {
             from { transform: scale(0.7); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
-        .close {
+        #mensagemModal .close {
             color: #aaa;
-            font-size: 28px;
+            float: right;
+            font-size: 24px;
             font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
             cursor: pointer;
         }
-
-        @media (max-width: 480px) {
-            .container {
-                margin: 30px auto;
-                padding: 15px;
-            }
-            input, button {
-                font-size: 14px;
-                padding: 10px;
-            }
-            .switch {
-                width: 50px;
-                height: 25px;
-            }
-            .slider:before {
-                height: 20px;
-                width: 20px;
-            }
+        #mensagemModal .close:hover,
+        #mensagemModal .close:focus {
+            color: black;
+            text-decoration: none;
+        }
+        #mensagemModal .message-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        #mensagemModal .success {
+            color: #155724;
+        }
+        #mensagemModal .danger {
+            color: #721c24;
+        }
+        #mensagemModal .warning {
+            color: #856404;
         }
     </style>
 </head>
 <body>
 
-<!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }}" role="alert" style="text-align:center;">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+<!-- Modal para feedback -->
+<div id="mensagemModal">
+    <div class="modal-mensagem">
+        <span class="close" onclick="document.getElementById('mensagemModal').style.display='none'">&times;</span>
+        <p id="mensagemTexto"></p>
+    </div>
+</div>
 
 <div class="container">
     <img src="{{ url_for('static', filename='senac-logo.png') }}" alt="Logo SENAC">
@@ -235,7 +228,7 @@
 <!-- Modal Termo -->
 <div id="termoModal">
     <div class="modal-content">
-        <span class="close">&times;</span>
+        <span class="close" onclick="fecharTermo()">&times;</span>
         <h2>Termo de Consentimento</h2>
         <p>
             Os dados que você nos fornecer por este espaço serão utilizados para possibilitar o seu cadastro e sua participação em ações extensivas e eventos similares.
@@ -246,29 +239,39 @@
 </div>
 
 <script>
-    // Modal
-    var modal = document.getElementById('termoModal');
-    var btn = document.getElementById('openTermo');
-    var span = document.getElementsByClassName('close')[0];
+    // Mostra o modal de mensagem com base na categoria
+    function mostrarMensagem(mensagem, tipo) {
+        const modal = document.getElementById('mensagemModal');
+        const texto = document.getElementById('mensagemTexto');
 
-    btn.onclick = function () {
+        texto.className = 'message-title ' + tipo;
+        texto.innerHTML = mensagem;
         modal.style.display = "block";
-        modal.style.opacity = 1;
     }
 
-    span.onclick = function () {
-        modal.style.display = "none";
-        modal.style.opacity = 0;
-    }
-
-    window.onclick = function (event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
-            modal.style.opacity = 0;
+    // Fecha qualquer modal ao clicar fora ou no X
+    window.onclick = function(event) {
+        if (event.target.id === "mensagemModal") {
+            event.target.style.display = "none";
+        }
+        if (event.target.id === "termoModal") {
+            event.target.style.display = "none";
         }
     }
 
-    // Botão Enviar só ativo se os termos forem aceitos
+    // Função para abrir o modal do termo
+    var btnTermo = document.getElementById("openTermo");
+    var modalTermo = document.getElementById("termoModal");
+
+    btnTermo.onclick = function () {
+        modalTermo.style.display = "block";
+    }
+
+    function fecharTermo() {
+        modalTermo.style.display = "none";
+    }
+
+    // Botão Enviar só ativo se ambos os termos forem aceitos
     var toggleTermo = document.getElementById("toggleTermoConsentimento");
     var togglePrivacidade = document.getElementById("togglePoliticaPrivacidade");
     var submitBtn = document.getElementById("submitBtn");
@@ -287,6 +290,17 @@
 
     toggleTermo.addEventListener('change', verificarCheckboxes);
     togglePrivacidade.addEventListener('change', verificarCheckboxes);
+
+    // Verifica se há flash message pra mostrar no modal
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          window.onload = function() {
+              mostrarMensagem("{{ message }}", "{{ category }}");
+          };
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 </script>
 
 </body>
