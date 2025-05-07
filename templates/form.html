@@ -12,6 +12,7 @@
             margin: 0;
             padding: 0;
         }
+
         .container {
             background-color: #ffffff;
             width: 90%;
@@ -21,15 +22,18 @@
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
+
         h1 {
             color: #00529B;
             margin-bottom: 20px;
         }
+
         img {
-            width: 130px; /* Logo aumentada */
+            width: 130px; /* Logo aumentado */
             height: auto;
             margin-bottom: 20px;
         }
+
         input, button {
             width: calc(100% - 20px);
             padding: 12px;
@@ -38,6 +42,7 @@
             border-radius: 5px;
             font-size: 16px;
         }
+
         .is-invalid {
             border-color: #dc3545;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5 8.2 8.6h-.4L6 5.7 3.8 3.6z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
@@ -45,6 +50,7 @@
             background-position: right 8px center;
             background-size: 16px 16px;
         }
+
         .invalid-feedback {
             color: #dc3545;
             font-size: 14px;
@@ -52,6 +58,7 @@
             margin-left: 5px;
             display: block;
         }
+
         button {
             width: 100%;
             background-color: #F39200;
@@ -61,39 +68,41 @@
             opacity: 0.6;
             transition: opacity 0.3s ease, background-color 0.3s ease;
         }
+
         button:hover {
             background-color: #D17A00;
         }
+
         button:enabled {
             opacity: 1;
         }
+
         button:disabled {
             background-color: #f1a500;
             opacity: 0.3;
             cursor: not-allowed;
         }
+
         .switch-container {
             display: flex;
             align-items: center;
             margin-top: 10px;
             justify-content: flex-start;
         }
+
         .switch-container label {
             font-size: 14px;
             color: #555;
             margin-right: 10px;
         }
+
         .switch {
             position: relative;
             display: inline-block;
             width: 50px;
             height: 25px;
         }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+
         .slider {
             position: absolute;
             cursor: pointer;
@@ -105,6 +114,7 @@
             transition: .4s;
             border-radius: 34px;
         }
+
         .slider:before {
             position: absolute;
             content: "";
@@ -112,13 +122,15 @@
             width: 18px;
             border-radius: 50%;
             left: 3px;
-            bottom: 2px;
+            bottom: 3px;
             background-color: white;
             transition: .4s;
         }
+
         input:checked + .slider {
             background-color: #4CAF50;
         }
+
         input:checked + .slider:before {
             transform: translateX(24px);
         }
@@ -135,6 +147,7 @@
             background-color: rgba(0,0,0,0.6);
             padding-top: 60px;
         }
+
         .modal-mensagem {
             background-color: #fefefe;
             margin: 10% auto;
@@ -145,45 +158,101 @@
             border-radius: 12px;
             animation: modal-in 0.4s ease-out;
         }
+
         @keyframes modal-in {
             from { transform: scale(0.7); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
-        #mensagemModal .close {
+
+        #mensagemModal .close,
+        #termoModal .close {
             color: #aaa;
             float: right;
             font-size: 24px;
             font-weight: bold;
             cursor: pointer;
         }
+
         #mensagemModal .close:hover,
-        #mensagemModal .close:focus {
+        #termoModal .close:hover {
             color: black;
-            text-decoration: none;
         }
+
         #mensagemModal .message-title {
             font-weight: bold;
             font-size: 18px;
             margin-bottom: 10px;
         }
+
         #mensagemModal .success {
             color: #155724;
         }
+
         #mensagemModal .danger {
             color: #721c24;
         }
+
         #mensagemModal .warning {
             color: #856404;
+        }
+
+        /* Modal Termo */
+        #termoModal {
+            display: none;
+            position: fixed;
+            z-index: 9998;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            padding-top: 60px;
+        }
+
+        #termoModal .modal-conteudo {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 12px;
+            animation: modal-in 0.4s ease-out;
+        }
+
+        #termoModal .close {
+            color: #aaa;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #termoModal .close:hover {
+            color: black;
         }
     </style>
 </head>
 <body>
 
-<!-- Modal para feedback -->
+<!-- Modal de Feedback -->
 <div id="mensagemModal">
     <div class="modal-mensagem">
         <span class="close" onclick="document.getElementById('mensagemModal').style.display='none'">&times;</span>
         <p id="mensagemTexto"></p>
+    </div>
+</div>
+
+<!-- Modal Termo -->
+<div id="termoModal">
+    <div class="modal-conteudo">
+        <span class="close" onclick="fecharTermo()">&times;</span>
+        <h2>Termo de Consentimento</h2>
+        <p>
+            Os dados que você nos fornecer por este espaço serão utilizados para possibilitar o seu cadastro e sua participação em ações extensivas e eventos similares.
+            Após a confirmação do envio dos dados, o Senac registrará dados de IP e geolocalização, apenas no momento do evento, do dispositivo utilizado para fins de comprovação de participação no evento.
+            Caso não esteja de acordo, não envie seus dados. Porém, informamos que não será possível dar prosseguimento à operação sem o consentimento para o tratamento dos dados pessoais.
+        </p>
     </div>
 </div>
 
@@ -225,22 +294,9 @@
     </form>
 </div>
 
-<!-- Modal Termo -->
-<div id="termoModal">
-    <div class="modal-content">
-        <span class="close" onclick="fecharTermo()">&times;</span>
-        <h2>Termo de Consentimento</h2>
-        <p>
-            Os dados que você nos fornecer por este espaço serão utilizados para possibilitar o seu cadastro e sua participação em ações extensivas e eventos similares.
-            Após a confirmação do envio dos dados, o Senac registrará dados de IP e geolocalização, apenas no momento do evento, do dispositivo utilizado para fins de comprovação de participação no evento.
-            Caso não esteja de acordo, não envie seus dados. Porém, informamos que não será possível dar prosseguimento à operação sem o consentimento para o tratamento dos dados pessoais.
-        </p>
-    </div>
-</div>
-
 <script>
-    // Mostra o modal de mensagem com base na categoria
-    function mostrarMensagem(mensagem, tipo) {
+    // Mostra feedback via modal
+    function mostrarMensagem(mensagem, tipo = "danger") {
         const modal = document.getElementById('mensagemModal');
         const texto = document.getElementById('mensagemTexto');
 
@@ -251,19 +307,17 @@
 
     // Fecha qualquer modal ao clicar fora ou no X
     window.onclick = function(event) {
-        if (event.target.id === "mensagemModal") {
-            event.target.style.display = "none";
-        }
-        if (event.target.id === "termoModal") {
+        if (event.target.id === "mensagemModal" || event.target.id === "termoModal") {
             event.target.style.display = "none";
         }
     }
 
-    // Função para abrir o modal do termo
+    // Abre o modal do termo
     var btnTermo = document.getElementById("openTermo");
     var modalTermo = document.getElementById("termoModal");
 
-    btnTermo.onclick = function () {
+    btnTermo.onclick = function (e) {
+        e.preventDefault();
         modalTermo.style.display = "block";
     }
 
@@ -291,7 +345,7 @@
     toggleTermo.addEventListener('change', verificarCheckboxes);
     togglePrivacidade.addEventListener('change', verificarCheckboxes);
 
-    // Verifica se há flash message pra mostrar no modal
+    // Exibe flash messages no modal
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
