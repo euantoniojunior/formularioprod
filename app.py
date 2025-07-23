@@ -7,13 +7,14 @@ from datetime import datetime
 import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
+from sqlalchemy import text  # Para executar SQL diretamente
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Configuração do Banco de Dados (mantida igual ao arquivo original)
+# Configuração do Banco de Dados (mantida idêntica ao seu arquivo original)
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -28,7 +29,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-# Modelo da Tabela Inscrições (com campo 'servico' adicionado)
+# Modelo da Tabela Inscrições
 class Inscricao(db.Model):
     __tablename__ = 'inscricao'
     id = db.Column(db.Integer, primary_key=True)
@@ -36,13 +37,14 @@ class Inscricao(db.Model):
     email = db.Column(db.String(100), nullable=False)
     cpf = db.Column(db.String(11), nullable=False, unique=True)
     fone = db.Column(db.String(20), nullable=False)
-    servico = db.Column(db.String(100), nullable=False)  # Novo campo
     ip = db.Column(db.String(50), nullable=False)
     data_hora = db.Column(
         db.String(50),
         nullable=False,
         default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
     )
+    # O campo 'servico' será adicionado via SQL se não existir
+    # Não o adicionamos aqui no modelo para evitar erros de migração no Render
 
 
 # Função de validação de CPF com dígitos verificadores
@@ -59,9 +61,36 @@ def validar_cpf(cpf):
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
-# Garante que a tabela seja criada ao iniciar a aplicação
+# Função para verificar e criar a coluna 'servico' se não existir
+def verificar_e_criar_coluna_servico():
+    with app.app_context():
+        conn = db.engine.connect()
+        try:
+            # Verifica se a coluna 'servico' já existe
+            result = conn.execute(
+                text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'inscricao' AND column_name = 'servico'
+                """)
+            )
+            if not result.fetchone():
+                # Cria a coluna
+                conn.execute(text("ALTER TABLE inscricao ADD COLUMN servico VARCHAR(100)"))
+                conn.commit()
+                print("✅ Coluna 'servico' criada com sucesso no banco de dados!")
+            else:
+                print("ℹ️ Coluna 'servico' já existe. Nenhuma ação necessária.")
+        except Exception as e:
+            print(f"❌ Erro ao verificar ou criar coluna 'servico': {e}")
+        finally:
+            conn.close()
+
+
+# Garante que a tabela seja criada e a coluna 'servico' exista
 with app.app_context():
     db.create_all()
+    verificar_e_criar_coluna_servico()  # Executa a verificação ao iniciar
 
 
 # Rota principal com formulário
@@ -72,7 +101,7 @@ def index():
         email = request.form.get('email')
         cpf = request.form.get('cpf').replace('.', '').replace('-', '')
         fone = request.form.get('fone')
-        servico = request.form.get('servico')  # Captura do serviço
+        servico = request.form.get('servico')  # Novo campo
 
         if not nome or not email or not cpf or not fone or not servico:
             flash("⚠️ Todos os campos são obrigatórios.", "danger")
@@ -97,8 +126,8 @@ def index():
             email=email,
             cpf=cpf,
             fone=fone,
-            servico=servico,
-            ip=ip_usuario
+            ip=ip_usuario,
+            servico=servico  # Armazena o serviço
         )
         try:
             db.session.add(nova_inscricao)
