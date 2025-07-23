@@ -13,7 +13,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Configuração do Banco de Dados
+# Configuração do Banco de Dados (mantida igual ao arquivo original)
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -28,7 +28,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-# Modelo da Tabela Inscrições
+# Modelo da Tabela Inscrições (com campo 'servico' adicionado)
 class Inscricao(db.Model):
     __tablename__ = 'inscricao'
     id = db.Column(db.Integer, primary_key=True)
