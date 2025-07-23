@@ -15,14 +15,11 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev'
 
 # Configuração do Banco de Dados
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
-
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
-
 if uri.startswith("postgresql://") and "?sslmode=" not in uri:
     if "localhost" not in uri and "127.0.0.1" not in uri:
         uri += "?sslmode=require"
-
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -39,6 +36,7 @@ class Inscricao(db.Model):
     email = db.Column(db.String(100), nullable=False)
     cpf = db.Column(db.String(11), nullable=False, unique=True)
     fone = db.Column(db.String(20), nullable=False)
+    servico = db.Column(db.String(100), nullable=False)  # Novo campo
     ip = db.Column(db.String(50), nullable=False)
     data_hora = db.Column(
         db.String(50),
@@ -52,15 +50,12 @@ def validar_cpf(cpf):
     cpf = ''.join(filter(str.isdigit, cpf))
     if len(cpf) != 11 or cpf == cpf[0] * 11:
         return False
-
     soma = sum(int(cpf[i]) * (10 - i) for i in range(9))
     resto = (soma * 10) % 11
     digito1 = resto if resto < 10 else 0
-
     soma = sum(int(cpf[i]) * (11 - i) for i in range(10))
     resto = (soma * 10) % 11
     digito2 = resto if resto < 10 else 0
-
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
@@ -77,8 +72,9 @@ def index():
         email = request.form.get('email')
         cpf = request.form.get('cpf').replace('.', '').replace('-', '')
         fone = request.form.get('fone')
+        servico = request.form.get('servico')  # Captura do serviço
 
-        if not nome or not email or not cpf or not fone:
+        if not nome or not email or not cpf or not fone or not servico:
             flash("⚠️ Todos os campos são obrigatórios.", "danger")
             return render_template('form.html',
                                    nome=nome,
@@ -96,14 +92,19 @@ def index():
                                    fone=fone)
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
-        nova_inscricao = Inscricao(nome=nome, email=email, cpf=cpf, fone=fone, ip=ip_usuario)
-
+        nova_inscricao = Inscricao(
+            nome=nome,
+            email=email,
+            cpf=cpf,
+            fone=fone,
+            servico=servico,
+            ip=ip_usuario
+        )
         try:
             db.session.add(nova_inscricao)
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
-            return redirect(url_for('index'))
-
+            return redirect(url_for('success'))
         except IntegrityError:
             db.session.rollback()
             flash("❌ Erro: Este CPF já está cadastrado.", "danger")
@@ -112,7 +113,6 @@ def index():
                                    email=email,
                                    cpf=cpf,
                                    fone=fone)
-
         except Exception as e:
             db.session.rollback()
             flash(f"⚠️ Erro ao salvar os dados: {str(e)}", "danger")
@@ -121,8 +121,13 @@ def index():
                                    email=email,
                                    cpf=cpf,
                                    fone=fone)
-
     return render_template('form.html')
+
+
+# Rota de sucesso
+@app.route('/success')
+def success():
+    return render_template('success.html')
 
 
 # Exportar para Excel
@@ -137,6 +142,7 @@ def baixar_excel():
                 "Email": r.email,
                 "CPF": r.cpf,
                 "Fone": r.fone,
+                "Serviço": r.servico,
                 "IP": r.ip,
                 "Data/Hora": r.data_hora
             } for r in registros]
@@ -144,13 +150,11 @@ def baixar_excel():
             excel_file = "inscricoes.xlsx"
             df.to_excel(excel_file, index=False, engine="openpyxl")
             return send_file(excel_file, as_attachment=True)
-
         flash("Nenhum dado disponível para exportação.", "warning")
-        return redirect(url_for('index'))
-
+        return redirect(url_for('visualizar_registros'))
     except Exception as e:
         flash("⚠️ Erro ao acessar os dados. Tente novamente mais tarde.", "danger")
-        return redirect(url_for('index'))
+        return redirect(url_for('visualizar_registros'))
 
 
 # Exportar para CSV
@@ -159,20 +163,17 @@ def download_file():
     try:
         registros = Inscricao.query.all()
         csv_file = "inscricoes.csv"
-
         if registros:
             with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-                file.write("ID,Nome,Email,CPF,Fone,IP,Data/Hora\n")
+                file.write("ID,Nome,Email,CPF,Fone,Serviço,IP,Data/Hora\n")
                 for r in registros:
-                    file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.ip},{r.data_hora}\n")
+                    file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.servico},{r.ip},{r.data_hora}\n")
             return send_file(csv_file, as_attachment=True)
-
         flash("Nenhum dado disponível para exportação.", "warning")
-        return redirect(url_for('index'))
-
+        return redirect(url_for('visualizar_registros'))
     except Exception as e:
         flash("⚠️ Erro ao gerar arquivo. Tente novamente.", "danger")
-        return redirect(url_for('index'))
+        return redirect(url_for('visualizar_registros'))
 
 
 # Visualizar registros
@@ -188,7 +189,6 @@ def visualizar_registros():
             Inscricao.query.filter_by(id=id_excluir).delete()
             db.session.commit()
             flash("Registro excluído com sucesso.", "success")
-
     registros = Inscricao.query.all()
     return render_template('visualizar.html', registros=registros)
 
