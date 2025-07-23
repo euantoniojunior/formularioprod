@@ -267,7 +267,27 @@
             <div class="invalid-feedback">{{ erro_cpf }}</div>
         {% endif %}
         <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required>
+        <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required>
 
+<!-- Campo: Serviço -->
+<label for="servico" style="display: block; text-align: left; margin: 15px 0 5px 5px; font-weight: bold; color: #555;">
+    Escolha o Serviço:
+</label>
+<select name="servico" id="servico" required style="width: calc(100% - 20px); padding: 12px; margin: 0 auto 20px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;">
+    <option value="" disabled selected>Selecione um serviço</option>
+    <option value="Massagem relaxante">Massagem relaxante</option>
+    <option value="Trança">Trança</option>
+    <option value="Designer de Sobrancelhas">Designer de Sobrancelhas</option>
+    <option value="Corte de Cabelo">Corte de Cabelo</option>
+    <option value="Maquiagem">Maquiagem</option>
+    <option value="Gastronomia">Gastronomia</option>
+    <option value="Oficina Gastronomia">Oficina Gastronomia</option>
+    <option value="Oficina Tecnologia">Oficina Tecnologia</option>
+    <option value="Oficina Gestão">Oficina Gestão</option>
+    <option value="Bioimpedância">Bioimpedância</option>
+    <option value="Aferição de Pressão">Aferição de Pressão</option>
+    <option value="Teste de Glicemia">Teste de Glicemia</option>
+</select>
         <!-- Termo de Consentimento -->
         <div class="switch-container">
             <label for="toggleTermoConsentimento">
