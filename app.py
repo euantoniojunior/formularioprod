@@ -7,7 +7,7 @@ from datetime import datetime
 import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
-from sqlalchemy import text  # Para executar SQL diretamente
+from sqlalchemy import text  # Para execução de SQL direto
 
 load_dotenv()
 
@@ -29,7 +29,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-# Modelo da Tabela Inscrições
+# Modelo da Tabela Inscrições (com o campo 'servico' adicionado no modelo!)
 class Inscricao(db.Model):
     __tablename__ = 'inscricao'
     id = db.Column(db.Integer, primary_key=True)
@@ -43,8 +43,7 @@ class Inscricao(db.Model):
         nullable=False,
         default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
     )
-    # O campo 'servico' será adicionado via SQL se não existir
-    # Não o adicionamos aqui no modelo para evitar erros de migração no Render
+    servico = db.Column(db.String(100), nullable=True)  # ✅ Campo adicionado no modelo
 
 
 # Função de validação de CPF com dígitos verificadores
@@ -61,12 +60,11 @@ def validar_cpf(cpf):
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
-# Função para verificar e criar a coluna 'servico' se não existir
+# Função para verificar e criar a coluna 'servico' se não existir (segurança extra)
 def verificar_e_criar_coluna_servico():
     with app.app_context():
         conn = db.engine.connect()
         try:
-            # Verifica se a coluna 'servico' já existe
             result = conn.execute(
                 text("""
                     SELECT column_name 
@@ -75,14 +73,13 @@ def verificar_e_criar_coluna_servico():
                 """)
             )
             if not result.fetchone():
-                # Cria a coluna
                 conn.execute(text("ALTER TABLE inscricao ADD COLUMN servico VARCHAR(100)"))
                 conn.commit()
                 print("✅ Coluna 'servico' criada com sucesso no banco de dados!")
             else:
-                print("ℹ️ Coluna 'servico' já existe. Nenhuma ação necessária.")
+                print("ℹ️ Coluna 'servico' já existe. Nada a fazer.")
         except Exception as e:
-            print(f"❌ Erro ao verificar ou criar coluna 'servico': {e}")
+            print(f"❌ Erro ao verificar/criar coluna 'servico': {e}")
         finally:
             conn.close()
 
@@ -101,7 +98,7 @@ def index():
         email = request.form.get('email')
         cpf = request.form.get('cpf').replace('.', '').replace('-', '')
         fone = request.form.get('fone')
-        servico = request.form.get('servico')  # Novo campo
+        servico = request.form.get('servico')  # ✅ Captura o serviço escolhido
 
         if not nome or not email or not cpf or not fone or not servico:
             flash("⚠️ Todos os campos são obrigatórios.", "danger")
@@ -127,7 +124,7 @@ def index():
             cpf=cpf,
             fone=fone,
             ip=ip_usuario,
-            servico=servico  # Armazena o serviço
+            servico=servico  # ✅ Agora funciona porque o campo está no modelo
         )
         try:
             db.session.add(nova_inscricao)
