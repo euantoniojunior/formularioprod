@@ -12,7 +12,6 @@
             margin: 0;
             padding: 0;
         }
-
         .container {
             background-color: #ffffff;
             width: 90%;
@@ -22,18 +21,15 @@
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
-
         h1 {
             color: #00529B;
             margin-bottom: 20px;
         }
-
         img {
-            width: 130px; /* Logo aumentado */
+            width: 130px;
             height: auto;
             margin-bottom: 20px;
         }
-
         input, button {
             width: calc(100% - 20px);
             padding: 12px;
@@ -42,7 +38,6 @@
             border-radius: 5px;
             font-size: 16px;
         }
-
         .is-invalid {
             border-color: #dc3545;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5 8.2 8.6h-.4L6 5.7 3.8 3.6z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
@@ -50,7 +45,6 @@
             background-position: right 8px center;
             background-size: 16px 16px;
         }
-
         .invalid-feedback {
             color: #dc3545;
             font-size: 14px;
@@ -58,7 +52,6 @@
             margin-left: 5px;
             display: block;
         }
-
         button {
             width: 100%;
             background-color: #F39200;
@@ -68,41 +61,34 @@
             opacity: 0.6;
             transition: opacity 0.3s ease, background-color 0.3s ease;
         }
-
         button:hover {
             background-color: #D17A00;
         }
-
         button:enabled {
             opacity: 1;
         }
-
         button:disabled {
             background-color: #f1a500;
             opacity: 0.3;
             cursor: not-allowed;
         }
-
         .switch-container {
             display: flex;
             align-items: center;
             margin-top: 10px;
             justify-content: flex-start;
         }
-
         .switch-container label {
             font-size: 14px;
             color: #555;
             margin-right: 10px;
         }
-
         .switch {
             position: relative;
             display: inline-block;
             width: 50px;
             height: 25px;
         }
-
         .slider {
             position: absolute;
             cursor: pointer;
@@ -114,7 +100,6 @@
             transition: .4s;
             border-radius: 34px;
         }
-
         .slider:before {
             position: absolute;
             content: "";
@@ -126,15 +111,12 @@
             background-color: white;
             transition: .4s;
         }
-
         input:checked + .slider {
             background-color: #4CAF50;
         }
-
         input:checked + .slider:before {
             transform: translateX(24px);
         }
-
         /* Modal de Mensagem */
         #mensagemModal {
             display: none;
@@ -147,7 +129,6 @@
             background-color: rgba(0,0,0,0.6);
             padding-top: 60px;
         }
-
         .modal-mensagem {
             background-color: #fefefe;
             margin: 10% auto;
@@ -158,12 +139,10 @@
             border-radius: 12px;
             animation: modal-in 0.4s ease-out;
         }
-
         @keyframes modal-in {
             from { transform: scale(0.7); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
-
         #mensagemModal .close,
         #termoModal .close {
             color: #aaa;
@@ -172,30 +151,24 @@
             font-weight: bold;
             cursor: pointer;
         }
-
         #mensagemModal .close:hover,
         #termoModal .close:hover {
             color: black;
         }
-
         #mensagemModal .message-title {
             font-weight: bold;
             font-size: 18px;
             margin-bottom: 10px;
         }
-
         #mensagemModal .success {
             color: #155724;
         }
-
         #mensagemModal .danger {
             color: #721c24;
         }
-
         #mensagemModal .warning {
             color: #856404;
         }
-
         /* Modal Termo */
         #termoModal {
             display: none;
@@ -208,7 +181,6 @@
             background-color: rgba(0,0,0,0.6);
             padding-top: 60px;
         }
-
         #termoModal .modal-conteudo {
             background-color: #fefefe;
             margin: 10% auto;
@@ -219,7 +191,6 @@
             border-radius: 12px;
             animation: modal-in 0.4s ease-out;
         }
-
         #termoModal .close {
             color: #aaa;
             float: right;
@@ -227,14 +198,12 @@
             font-weight: bold;
             cursor: pointer;
         }
-
         #termoModal .close:hover {
             color: black;
         }
     </style>
 </head>
 <body>
-
 <!-- Modal de Feedback -->
 <div id="mensagemModal">
     <div class="modal-mensagem">
@@ -242,7 +211,6 @@
         <p id="mensagemTexto"></p>
     </div>
 </div>
-
 <!-- Modal Termo -->
 <div id="termoModal">
     <div class="modal-conteudo">
@@ -255,7 +223,6 @@
         </p>
     </div>
 </div>
-
 <div class="container">
     <img src="{{ url_for('static', filename='senac-logo.png') }}" alt="Logo SENAC">
     <h1>Inscreva-se no Evento</h1>
@@ -267,27 +234,27 @@
             <div class="invalid-feedback">{{ erro_cpf }}</div>
         {% endif %}
         <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required>
-        <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required>
 
-<!-- Campo: Serviço -->
-<label for="servico" style="display: block; text-align: left; margin: 15px 0 5px 5px; font-weight: bold; color: #555;">
-    Escolha o Serviço:
-</label>
-<select name="servico" id="servico" required style="width: calc(100% - 20px); padding: 12px; margin: 0 auto 20px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;">
-    <option value="" disabled selected>Selecione um serviço</option>
-    <option value="Massagem relaxante">Massagem relaxante</option>
-    <option value="Trança">Trança</option>
-    <option value="Designer de Sobrancelhas">Designer de Sobrancelhas</option>
-    <option value="Corte de Cabelo">Corte de Cabelo</option>
-    <option value="Maquiagem">Maquiagem</option>
-    <option value="Gastronomia">Gastronomia</option>
-    <option value="Oficina Gastronomia">Oficina Gastronomia</option>
-    <option value="Oficina Tecnologia">Oficina Tecnologia</option>
-    <option value="Oficina Gestão">Oficina Gestão</option>
-    <option value="Bioimpedância">Bioimpedância</option>
-    <option value="Aferição de Pressão">Aferição de Pressão</option>
-    <option value="Teste de Glicemia">Teste de Glicemia</option>
-</select>
+        <!-- Campo: Serviço -->
+        <label for="servico" style="display: block; text-align: left; margin: 15px 0 5px 5px; font-weight: bold; color: #555;">
+            Escolha o Serviço:
+        </label>
+        <select name="servico" id="servico" required style="width: calc(100% - 20px); padding: 12px; margin: 0 auto 20px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;">
+            <option value="" disabled selected>Selecione um serviço</option>
+            <option value="Massagem relaxante">Massagem relaxante</option>
+            <option value="Trança">Trança</option>
+            <option value="Designer de Sobrancelhas">Designer de Sobrancelhas</option>
+            <option value="Corte de Cabelo">Corte de Cabelo</option>
+            <option value="Maquiagem">Maquiagem</option>
+            <option value="Gastronomia">Gastronomia</option>
+            <option value="Oficina Gastronomia">Oficina Gastronomia</option>
+            <option value="Oficina Tecnologia">Oficina Tecnologia</option>
+            <option value="Oficina Gestão">Oficina Gestão</option>
+            <option value="Bioimpedância">Bioimpedância</option>
+            <option value="Aferição de Pressão">Aferição de Pressão</option>
+            <option value="Teste de Glicemia">Teste de Glicemia</option>
+        </select>
+
         <!-- Termo de Consentimento -->
         <div class="switch-container">
             <label for="toggleTermoConsentimento">
@@ -298,7 +265,6 @@
                 <span class="slider"></span>
             </label>
         </div>
-
         <!-- Política de Privacidade -->
         <div class="switch-container">
             <label for="togglePoliticaPrivacidade">
@@ -309,17 +275,14 @@
                 <span class="slider"></span>
             </label>
         </div>
-
         <button type="submit" id="submitBtn" disabled>Enviar Inscrição</button>
     </form>
 </div>
-
 <script>
     // Mostra feedback via modal
     function mostrarMensagem(mensagem, tipo = "danger") {
         const modal = document.getElementById('mensagemModal');
         const texto = document.getElementById('mensagemTexto');
-
         texto.className = 'message-title ' + tipo;
         texto.innerHTML = mensagem;
         modal.style.display = "block";
@@ -335,12 +298,10 @@
     // Abre o modal do termo
     var btnTermo = document.getElementById("openTermo");
     var modalTermo = document.getElementById("termoModal");
-
     btnTermo.onclick = function (e) {
         e.preventDefault();
         modalTermo.style.display = "block";
     }
-
     function fecharTermo() {
         modalTermo.style.display = "none";
     }
@@ -361,7 +322,6 @@
             submitBtn.style.backgroundColor = "#f1a500";
         }
     }
-
     toggleTermo.addEventListener('change', verificarCheckboxes);
     togglePrivacidade.addEventListener('change', verificarCheckboxes);
 
@@ -376,6 +336,5 @@
       {% endif %}
     {% endwith %}
 </script>
-
 </body>
 </html>
