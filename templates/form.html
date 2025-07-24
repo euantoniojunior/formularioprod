@@ -117,6 +117,7 @@
         input:checked + .slider:before {
             transform: translateX(24px);
         }
+        /* Modal Termo */
         #termoModal {
             display: none;
             position: fixed;
@@ -182,12 +183,15 @@
         {% endif %}
 
         <input type="text" name="cpf" id="cpf" placeholder="CPF (Digite apenas os números)" value="{{ cpf }}" required minlength="11" maxlength="11"
-               class="{% if erro_cpf %}is-invalid{% endif %}" style="margin-bottom: 5px;">
+               class="{% if erro_cpf or 'cpf_duplicado' in form_erros %}is-invalid{% endif %}" style="margin-bottom: 5px;">
         {% if erro_cpf %}
             <div class="invalid-feedback">{{ erro_cpf }}</div>
         {% endif %}
         {% if 'cpf' in form_erros %}
             <div class="invalid-feedback">⚠️ CPF é obrigatório.</div>
+        {% endif %}
+        {% if 'cpf_duplicado' in form_erros %}
+            <div class="invalid-feedback">❌ Este CPF já está cadastrado.</div>
         {% endif %}
 
         <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required {% if fone %}style="margin-bottom: 5px;"{% endif %}>
@@ -243,6 +247,7 @@
 </div>
 
 <script>
+    // Abre o modal do termo
     var btnTermo = document.getElementById("openTermo");
     var modalTermo = document.getElementById("termoModal");
     btnTermo.onclick = function (e) {
@@ -253,27 +258,7 @@
         modalTermo.style.display = "none";
     }
 
+    // Botão Enviar só ativo se ambos os termos forem aceitos
     var toggleTermo = document.getElementById("toggleTermoConsentimento");
     var togglePrivacidade = document.getElementById("togglePoliticaPrivacidade");
-    var submitBtn = document.getElementById("submitBtn");
-
-    function verificarCheckboxes() {
-        if (toggleTermo.checked && togglePrivacidade.checked) {
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = 1;
-            submitBtn.style.backgroundColor = "#F39200";
-        } else {
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = 0.3;
-            submitBtn.style.backgroundColor = "#f1a500";
-        }
-    }
-    toggleTermo.addEventListener('change', verificarCheckboxes);
-    togglePrivacidade.addEventListener('change', verificarCheckboxes);
-
-    {% if nome and email and cpf and fone and servico %}
-    verificarCheckboxes();
-    {% endif %}
-</script>
-</body>
-</html>
+    var submitBtn = document.getElementById("
