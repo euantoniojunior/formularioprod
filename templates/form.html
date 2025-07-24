@@ -117,59 +117,6 @@
         input:checked + .slider:before {
             transform: translateX(24px);
         }
-        /* Modal de Mensagem */
-        #mensagemModal {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
-            padding-top: 60px;
-        }
-        .modal-mensagem {
-            background-color: #fefefe;
-            margin: 10% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 400px;
-            border-radius: 12px;
-            animation: modal-in 0.4s ease-out;
-        }
-        @keyframes modal-in {
-            from { transform: scale(0.7); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-        #mensagemModal .close,
-        #termoModal .close {
-            color: #aaa;
-            float: right;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        #mensagemModal .close:hover,
-        #termoModal .close:hover {
-            color: black;
-        }
-        #mensagemModal .message-title {
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        #mensagemModal .success {
-            color: #155724;
-        }
-        #mensagemModal .danger {
-            color: #721c24;
-        }
-        #mensagemModal .warning {
-            color: #856404;
-        }
-        /* Modal Termo */
         #termoModal {
             display: none;
             position: fixed;
@@ -201,17 +148,13 @@
         #termoModal .close:hover {
             color: black;
         }
+        @keyframes modal-in {
+            from { transform: scale(0.7); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
-<!-- Modal de Feedback -->
-<div id="mensagemModal">
-    <div class="modal-mensagem">
-        <span class="close" onclick="document.getElementById('mensagemModal').style.display='none'">&times;</span>
-        <p id="mensagemTexto"></p>
-    </div>
-</div>
-<!-- Modal Termo -->
 <div id="termoModal">
     <div class="modal-conteudo">
         <span class="close" onclick="fecharTermo()">&times;</span>
@@ -223,17 +166,34 @@
         </p>
     </div>
 </div>
+
 <div class="container">
     <img src="{{ url_for('static', filename='senac-logo.png') }}" alt="Logo SENAC">
     <h1>Inscreva-se no Evento</h1>
     <form method="POST">
-        <input type="text" name="nome" placeholder="Nome Completo" value="{{ nome }}" required>
-        <input type="email" name="email" placeholder="E-mail" value="{{ email }}" required>
-        <input type="text" name="cpf" id="cpf" placeholder="CPF (Digite apenas os números)" value="{{ cpf }}" required minlength="11" maxlength="11" class="{% if erro_cpf %}is-invalid{% endif %}">
+        <input type="text" name="nome" placeholder="Nome Completo" value="{{ nome }}" required {% if nome %}style="margin-bottom: 5px;"{% endif %}>
+        {% if 'nome' in form_erros %}
+            <div class="invalid-feedback">⚠️ Nome é obrigatório.</div>
+        {% endif %}
+
+        <input type="email" name="email" placeholder="E-mail" value="{{ email }}" required {% if email %}style="margin-bottom: 5px;"{% endif %}>
+        {% if 'email' in form_erros %}
+            <div class="invalid-feedback">⚠️ E-mail é obrigatório.</div>
+        {% endif %}
+
+        <input type="text" name="cpf" id="cpf" placeholder="CPF (Digite apenas os números)" value="{{ cpf }}" required minlength="11" maxlength="11"
+               class="{% if erro_cpf %}is-invalid{% endif %}" style="margin-bottom: 5px;">
         {% if erro_cpf %}
             <div class="invalid-feedback">{{ erro_cpf }}</div>
         {% endif %}
-        <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required>
+        {% if 'cpf' in form_erros %}
+            <div class="invalid-feedback">⚠️ CPF é obrigatório.</div>
+        {% endif %}
+
+        <input type="text" name="fone" placeholder="Telefone" value="{{ fone }}" required {% if fone %}style="margin-bottom: 5px;"{% endif %}>
+        {% if 'fone' in form_erros %}
+            <div class="invalid-feedback">⚠️ Telefone é obrigatório.</div>
+        {% endif %}
 
         <!-- Campo: Serviço -->
         <label for="servico" style="display: block; text-align: left; margin: 15px 0 5px 5px; font-weight: bold; color: #555;">
@@ -241,19 +201,22 @@
         </label>
         <select name="servico" id="servico" required style="width: calc(100% - 20px); padding: 12px; margin: 0 auto 20px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;">
             <option value="" disabled selected>Selecione um serviço</option>
-            <option value="Massagem relaxante">Massagem relaxante</option>
-            <option value="Trança">Trança</option>
-            <option value="Designer de Sobrancelhas">Designer de Sobrancelhas</option>
-            <option value="Corte de Cabelo">Corte de Cabelo</option>
-            <option value="Maquiagem">Maquiagem</option>
-            <option value="Gastronomia">Gastronomia</option>
-            <option value="Oficina Gastronomia">Oficina Gastronomia</option>
-            <option value="Oficina Tecnologia">Oficina Tecnologia</option>
-            <option value="Oficina Gestão">Oficina Gestão</option>
-            <option value="Bioimpedância">Bioimpedância</option>
-            <option value="Aferição de Pressão">Aferição de Pressão</option>
-            <option value="Teste de Glicemia">Teste de Glicemia</option>
+            <option value="Massagem relaxante" {% if servico == 'Massagem relaxante' %}selected{% endif %}>Massagem relaxante</option>
+            <option value="Trança" {% if servico == 'Trança' %}selected{% endif %}>Trança</option>
+            <option value="Designer de Sobrancelhas" {% if servico == 'Designer de Sobrancelhas' %}selected{% endif %}>Designer de Sobrancelhas</option>
+            <option value="Corte de Cabelo" {% if servico == 'Corte de Cabelo' %}selected{% endif %}>Corte de Cabelo</option>
+            <option value="Maquiagem" {% if servico == 'Maquiagem' %}selected{% endif %}>Maquiagem</option>
+            <option value="Gastronomia" {% if servico == 'Gastronomia' %}selected{% endif %}>Gastronomia</option>
+            <option value="Oficina Gastronomia" {% if servico == 'Oficina Gastronomia' %}selected{% endif %}>Oficina Gastronomia</option>
+            <option value="Oficina Tecnologia" {% if servico == 'Oficina Tecnologia' %}selected{% endif %}>Oficina Tecnologia</option>
+            <option value="Oficina Gestão" {% if servico == 'Oficina Gestão' %}selected{% endif %}>Oficina Gestão</option>
+            <option value="Bioimpedância" {% if servico == 'Bioimpedância' %}selected{% endif %}>Bioimpedância</option>
+            <option value="Aferição de Pressão" {% if servico == 'Aferição de Pressão' %}selected{% endif %}>Aferição de Pressão</option>
+            <option value="Teste de Glicemia" {% if servico == 'Teste de Glicemia' %}selected{% endif %}>Teste de Glicemia</option>
         </select>
+        {% if 'servico' in form_erros %}
+            <div class="invalid-feedback">⚠️ Selecione um serviço.</div>
+        {% endif %}
 
         <!-- Termo de Consentimento -->
         <div class="switch-container">
@@ -278,24 +241,8 @@
         <button type="submit" id="submitBtn" disabled>Enviar Inscrição</button>
     </form>
 </div>
+
 <script>
-    // Mostra feedback via modal
-    function mostrarMensagem(mensagem, tipo = "danger") {
-        const modal = document.getElementById('mensagemModal');
-        const texto = document.getElementById('mensagemTexto');
-        texto.className = 'message-title ' + tipo;
-        texto.innerHTML = mensagem;
-        modal.style.display = "block";
-    }
-
-    // Fecha qualquer modal ao clicar fora ou no X
-    window.onclick = function(event) {
-        if (event.target.id === "mensagemModal" || event.target.id === "termoModal") {
-            event.target.style.display = "none";
-        }
-    }
-
-    // Abre o modal do termo
     var btnTermo = document.getElementById("openTermo");
     var modalTermo = document.getElementById("termoModal");
     btnTermo.onclick = function (e) {
@@ -306,7 +253,6 @@
         modalTermo.style.display = "none";
     }
 
-    // Botão Enviar só ativo se ambos os termos forem aceitos
     var toggleTermo = document.getElementById("toggleTermoConsentimento");
     var togglePrivacidade = document.getElementById("togglePoliticaPrivacidade");
     var submitBtn = document.getElementById("submitBtn");
@@ -325,16 +271,9 @@
     toggleTermo.addEventListener('change', verificarCheckboxes);
     togglePrivacidade.addEventListener('change', verificarCheckboxes);
 
-    // Exibe flash messages no modal
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          window.onload = function() {
-              mostrarMensagem("{{ message }}", "{{ category }}");
-          };
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+    {% if nome and email and cpf and fone and servico %}
+    verificarCheckboxes();
+    {% endif %}
 </script>
 </body>
 </html>
