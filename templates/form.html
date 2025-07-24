@@ -40,7 +40,7 @@
         }
         .is-invalid {
             border-color: #dc3545;
-            background-image: url("image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5 8.2 8.6h-.4L6 5.7 3.8 3.6z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5 8.2 8.6h-.4L6 5.7 3.8 3.6z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right 8px center;
             background-size: 16px 16px;
@@ -228,7 +228,7 @@
                 <p>Eu aceito os <a href="#" id="openTermo">Termos de Consentimento</a></p>
             </label>
             <label class="switch">
-                <input type="checkbox" id="toggleTermoConsentimento" required {% if nome and email and cpf and fone %}checked{% endif %}>
+                <input type="checkbox" id="toggleTermoConsentimento" required {% if nome or email or cpf or fone %}checked{% endif %}>
                 <span class="slider"></span>
             </label>
         </div>
@@ -238,7 +238,7 @@
                 <p>Eu aceito a <a href="https://portal.ac.senac.br/aviso-privacidade" target="_blank">Política de Privacidade</a></p>
             </label>
             <label class="switch">
-                <input type="checkbox" id="togglePoliticaPrivacidade" required {% if nome and email and cpf and fone %}checked{% endif %}>
+                <input type="checkbox" id="togglePoliticaPrivacidade" required {% if nome or email or cpf or fone %}checked{% endif %}>
                 <span class="slider"></span>
             </label>
         </div>
@@ -253,7 +253,7 @@
     btnTermo.onclick = function (e) {
         e.preventDefault();
         modalTermo.style.display = "block";
-    }
+    };
     function fecharTermo() {
         modalTermo.style.display = "none";
     }
@@ -275,12 +275,12 @@
         }
     }
 
-    // Executa ao carregar a página
+    // Executa imediatamente ao carregar a página
     window.addEventListener("load", function() {
-        // Força a verificação inicial
+        // Força a verificação inicial (garante que o estado dos switches seja lido)
         setTimeout(verificarCheckboxes, 100);
 
-        // Observa mudanças
+        // Observa mudanças nos switches
         toggleTermo.addEventListener('change', verificarCheckboxes);
         togglePrivacidade.addEventListener('change', verificarCheckboxes);
     });
