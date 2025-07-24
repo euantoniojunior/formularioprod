@@ -7,14 +7,14 @@ from datetime import datetime
 import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
-from sqlalchemy import text  # Para execução de SQL direto
+from sqlalchemy import text
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Configuração do Banco de Dados (mantida idêntica ao seu arquivo original)
+# Configuração do Banco de Dados (igual ao original)
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -29,7 +29,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-# Modelo da Tabela Inscrições (com o campo 'servico' adicionado no modelo!)
+# Modelo da Tabela Inscrições (com campo 'servico')
 class Inscricao(db.Model):
     __tablename__ = 'inscricao'
     id = db.Column(db.Integer, primary_key=True)
@@ -37,16 +37,16 @@ class Inscricao(db.Model):
     email = db.Column(db.String(100), nullable=False)
     cpf = db.Column(db.String(11), nullable=False, unique=True)
     fone = db.Column(db.String(20), nullable=False)
+    servico = db.Column(db.String(100), nullable=True)  # Novo campo
     ip = db.Column(db.String(50), nullable=False)
     data_hora = db.Column(
         db.String(50),
         nullable=False,
         default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
     )
-    servico = db.Column(db.String(100), nullable=True)  # ✅ Campo adicionado no modelo
 
 
-# Função de validação de CPF com dígitos verificadores
+# Função de validação de CPF
 def validar_cpf(cpf):
     cpf = ''.join(filter(str.isdigit, cpf))
     if len(cpf) != 11 or cpf == cpf[0] * 11:
@@ -60,7 +60,7 @@ def validar_cpf(cpf):
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
-# Função para verificar e criar a coluna 'servico' se não existir (segurança extra)
+# Função para criar coluna 'servico' se não existir
 def verificar_e_criar_coluna_servico():
     with app.app_context():
         conn = db.engine.connect()
@@ -75,22 +75,22 @@ def verificar_e_criar_coluna_servico():
             if not result.fetchone():
                 conn.execute(text("ALTER TABLE inscricao ADD COLUMN servico VARCHAR(100)"))
                 conn.commit()
-                print("✅ Coluna 'servico' criada com sucesso no banco de dados!")
+                print("✅ Coluna 'servico' criada com sucesso!")
             else:
-                print("ℹ️ Coluna 'servico' já existe. Nada a fazer.")
+                print("ℹ️ Coluna 'servico' já existe.")
         except Exception as e:
-            print(f"❌ Erro ao verificar/criar coluna 'servico': {e}")
+            print(f"❌ Erro ao criar coluna: {e}")
         finally:
             conn.close()
 
 
-# Garante que a tabela seja criada e a coluna 'servico' exista
+# Cria tabelas e verifica coluna
 with app.app_context():
     db.create_all()
-    verificar_e_criar_coluna_servico()  # Executa a verificação ao iniciar
+    verificar_e_criar_coluna_servico()
 
 
-# Rota principal com formulário
+# Rota principal
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -98,24 +98,32 @@ def index():
         email = request.form.get('email')
         cpf = request.form.get('cpf').replace('.', '').replace('-', '')
         fone = request.form.get('fone')
-        servico = request.form.get('servico')  # ✅ Captura o serviço escolhido
+        servico = request.form.get('servico')
 
-        if not nome or not email or not cpf or not fone or not servico:
-            flash("⚠️ Todos os campos são obrigatórios.", "danger")
+        form_erros = []
+        if not nome: form_erros.append('nome')
+        if not email: form_erros.append('email')
+        if not cpf: form_erros.append('cpf')
+        if not fone: form_erros.append('fone')
+        if not servico: form_erros.append('servico')
+
+        if form_erros:
             return render_template('form.html',
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone)
+                                   fone=fone,
+                                   servico=servico,
+                                   form_erros=form_erros)
 
         if not validar_cpf(cpf):
-            erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos válidos."
             return render_template('form.html',
-                                   erro_cpf=erro_cpf,
+                                   erro_cpf="❌ CPF inválido.",
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone)
+                                   fone=fone,
+                                   servico=servico)
 
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
         nova_inscricao = Inscricao(
@@ -123,8 +131,8 @@ def index():
             email=email,
             cpf=cpf,
             fone=fone,
-            ip=ip_usuario,
-            servico=servico  # ✅ Agora funciona porque o campo está no modelo
+            servico=servico,
+            ip=ip_usuario
         )
         try:
             db.session.add(nova_inscricao)
@@ -133,20 +141,23 @@ def index():
             return redirect(url_for('success'))
         except IntegrityError:
             db.session.rollback()
-            flash("❌ Erro: Este CPF já está cadastrado.", "danger")
             return render_template('form.html',
+                                   erro_cpf="❌ CPF já cadastrado.",
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone)
+                                   fone=fone,
+                                   servico=servico)
         except Exception as e:
             db.session.rollback()
-            flash(f"⚠️ Erro ao salvar os dados: {str(e)}", "danger")
+            flash(f"Erro: {str(e)}", "danger")
             return render_template('form.html',
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
-                                   fone=fone)
+                                   fone=fone,
+                                   servico=servico)
+
     return render_template('form.html')
 
 
@@ -176,10 +187,10 @@ def baixar_excel():
             excel_file = "inscricoes.xlsx"
             df.to_excel(excel_file, index=False, engine="openpyxl")
             return send_file(excel_file, as_attachment=True)
-        flash("Nenhum dado disponível para exportação.", "warning")
+        flash("Nenhum dado para exportar.", "warning")
         return redirect(url_for('visualizar_registros'))
     except Exception as e:
-        flash("⚠️ Erro ao acessar os dados. Tente novamente mais tarde.", "danger")
+        flash("Erro ao exportar.", "danger")
         return redirect(url_for('visualizar_registros'))
 
 
@@ -195,10 +206,10 @@ def download_file():
                 for r in registros:
                     file.write(f"{r.id},{r.nome},{r.email},{r.cpf},{r.fone},{r.servico},{r.ip},{r.data_hora}\n")
             return send_file(csv_file, as_attachment=True)
-        flash("Nenhum dado disponível para exportação.", "warning")
+        flash("Nenhum dado para exportar.", "warning")
         return redirect(url_for('visualizar_registros'))
     except Exception as e:
-        flash("⚠️ Erro ao gerar arquivo. Tente novamente.", "danger")
+        flash("Erro ao gerar CSV.", "danger")
         return redirect(url_for('visualizar_registros'))
 
 
@@ -214,25 +225,25 @@ def visualizar_registros():
             id_excluir = request.form.get('excluir')
             Inscricao.query.filter_by(id=id_excluir).delete()
             db.session.commit()
-            flash("Registro excluído com sucesso.", "success")
+            flash("Registro excluído.", "success")
     registros = Inscricao.query.all()
     return render_template('visualizar.html', registros=registros)
 
 
-# Limpa tabelas
+# Limpar tabelas
 @app.route('/limpar_tabelas', methods=['POST'])
 def limpar_tabelas():
     try:
         db.session.query(Inscricao).delete()
         db.session.commit()
-        flash("Todas as tabelas foram limpas com sucesso.", "success")
+        flash("Tabelas limpas.", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao limpar as tabelas: {e}", "danger")
+        flash(f"Erro ao limpar: {e}", "danger")
     return redirect(url_for('index'))
 
 
-# Roda a aplicação
+# Iniciar aplicação
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
