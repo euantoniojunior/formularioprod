@@ -228,7 +228,7 @@
                 <p>Eu aceito os <a href="#" id="openTermo">Termos de Consentimento</a></p>
             </label>
             <label class="switch">
-                <input type="checkbox" id="toggleTermoConsentimento" required>
+                <input type="checkbox" id="toggleTermoConsentimento" required {% if nome and email and cpf and fone %}checked{% endif %}>
                 <span class="slider"></span>
             </label>
         </div>
@@ -238,7 +238,7 @@
                 <p>Eu aceito a <a href="https://portal.ac.senac.br/aviso-privacidade" target="_blank">Política de Privacidade</a></p>
             </label>
             <label class="switch">
-                <input type="checkbox" id="togglePoliticaPrivacidade" required>
+                <input type="checkbox" id="togglePoliticaPrivacidade" required {% if nome and email and cpf and fone %}checked{% endif %}>
                 <span class="slider"></span>
             </label>
         </div>
@@ -247,7 +247,6 @@
 </div>
 
 <script>
-    <script>
     // Abre o modal do termo
     var btnTermo = document.getElementById("openTermo");
     var modalTermo = document.getElementById("termoModal");
@@ -276,11 +275,15 @@
         }
     }
 
-    // Verifica ao carregar (para manter estado após erro)
-    window.onload = function() {
-        setTimeout(verificarCheckboxes, 100); // Pequeno delay para garantir que os inputs estejam carregados
-    };
+    // Executa ao carregar a página
+    window.addEventListener("load", function() {
+        // Força a verificação inicial
+        setTimeout(verificarCheckboxes, 100);
 
-    toggleTermo.addEventListener('change', verificarCheckboxes);
-    togglePrivacidade.addEventListener('change', verificarCheckboxes);
+        // Observa mudanças
+        toggleTermo.addEventListener('change', verificarCheckboxes);
+        togglePrivacidade.addEventListener('change', verificarCheckboxes);
+    });
 </script>
+</body>
+</html>
