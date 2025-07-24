@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Configuração do Banco de Dados (igual ao original)
+# Configuração do Banco de Dados (mantida igual ao original)
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -100,6 +100,7 @@ def index():
         fone = request.form.get('fone')
         servico = request.form.get('servico')
 
+        # Validação de campos obrigatórios
         form_erros = []
         if not nome: form_erros.append('nome')
         if not email: form_erros.append('email')
@@ -142,12 +143,12 @@ def index():
         except IntegrityError:
             db.session.rollback()
             return render_template('form.html',
-                                   erro_cpf="❌ CPF já cadastrado.",
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
                                    fone=fone,
-                                   servico=servico)
+                                   servico=servico,
+                                   form_erros=['cpf_duplicado'])
         except Exception as e:
             db.session.rollback()
             flash(f"Erro: {str(e)}", "danger")
