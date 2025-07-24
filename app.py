@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Configuração do Banco de Dados (mantida igual ao original)
+# Configuração do Banco de Dados
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -37,7 +37,7 @@ class Inscricao(db.Model):
     email = db.Column(db.String(100), nullable=False)
     cpf = db.Column(db.String(11), nullable=False, unique=True)
     fone = db.Column(db.String(20), nullable=False)
-    servico = db.Column(db.String(100), nullable=True)  # Novo campo
+    servico = db.Column(db.String(100), nullable=True)
     ip = db.Column(db.String(50), nullable=False)
     data_hora = db.Column(
         db.String(50),
@@ -100,7 +100,6 @@ def index():
         fone = request.form.get('fone')
         servico = request.form.get('servico')
 
-        # Validação de campos obrigatórios
         form_erros = []
         if not nome: form_erros.append('nome')
         if not email: form_erros.append('email')
@@ -214,19 +213,31 @@ def download_file():
         return redirect(url_for('visualizar_registros'))
 
 
-# Visualizar registros
+# Visualizar registros (CORRIGIDO)
 @app.route('/visualizar', methods=['GET', 'POST'])
 def visualizar_registros():
     if request.method == 'POST':
         if request.form.get('limpar_tudo'):
-            db.session.query(Inscricao).delete()
-            db.session.commit()
-            flash("Todos os registros foram excluídos.", "success")
+            db.session.close()
+            try:
+                db.session.query(Inscricao).delete()
+                db.session.commit()
+                flash("Todos os registros foram excluídos.", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash("Erro ao limpar registros.", "danger")
+
         elif request.form.get('excluir'):
             id_excluir = request.form.get('excluir')
-            Inscricao.query.filter_by(id=id_excluir).delete()
-            db.session.commit()
-            flash("Registro excluído.", "success")
+            db.session.close()
+            try:
+                db.session.query(Inscricao).filter_by(id=id_excluir).delete()
+                db.session.commit()
+                flash("Registro excluído com sucesso.", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash("Erro ao excluir registro.", "danger")
+
     registros = Inscricao.query.all()
     return render_template('visualizar.html', registros=registros)
 
