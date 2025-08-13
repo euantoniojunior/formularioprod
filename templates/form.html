@@ -199,29 +199,34 @@
             <div class="invalid-feedback">⚠️ Telefone é obrigatório.</div>
         {% endif %}
 
-        <!-- Campo: Serviço -->
-        <label for="servico" style="display: block; text-align: left; margin: 15px 0 5px 5px; font-weight: bold; color: #555;">
-            Escolha o Serviço:
-        </label>
-        <select name="servico" id="servico" required style="width: calc(100% - 20px); padding: 12px; margin: 0 auto 20px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;">
-            <option value="" disabled selected>Selecione um serviço</option>
-            <option value="Massagem relaxante" {% if servico == 'Massagem relaxante' %}selected{% endif %}>Massagem relaxante</option>
-            <option value="Trança" {% if servico == 'Trança' %}selected{% endif %}>Trança</option>
-            <option value="Designer de Sobrancelhas" {% if servico == 'Designer de Sobrancelhas' %}selected{% endif %}>Designer de Sobrancelhas</option>
-            <option value="Corte de Cabelo" {% if servico == 'Corte de Cabelo' %}selected{% endif %}>Corte de Cabelo</option>
-            <option value="Maquiagem" {% if servico == 'Maquiagem' %}selected{% endif %}>Maquiagem</option>
-            <option value="Gastronomia" {% if servico == 'Gastronomia' %}selected{% endif %}>Gastronomia</option>
-            <option value="Oficina Gastronomia" {% if servico == 'Oficina Gastronomia' %}selected{% endif %}>Oficina Gastronomia</option>
-            <option value="Oficina Tecnologia" {% if servico == 'Oficina Tecnologia' %}selected{% endif %}>Oficina Tecnologia</option>
-            <option value="Oficina Gestão" {% if servico == 'Oficina Gestão' %}selected{% endif %}>Oficina Gestão</option>
-            <option value="Bioimpedância" {% if servico == 'Bioimpedância' %}selected{% endif %}>Bioimpedância</option>
-            <option value="Aferição de Pressão" {% if servico == 'Aferição de Pressão' %}selected{% endif %}>Aferição de Pressão</option>
-            <option value="Teste de Glicemia" {% if servico == 'Teste de Glicemia' %}selected{% endif %}>Teste de Glicemia</option>
-        </select>
-        {% if 'servico' in form_erros %}
-            <div class="invalid-feedback">⚠️ Selecione um serviço.</div>
-        {% endif %}
-
+       <!-- Campo: Serviço -->
+        
+<label for="servico" style="display: block; text-align: left; margin: 15px 0 5px 5px; font-weight: bold; color: #555;">
+    Escolha o Serviço/Evento:
+</label>
+<select name="servico" id="servico" required style="width: calc(100% - 20px); padding: 12px; margin: 0 auto 20px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;">
+    <option value="" disabled selected>Selecione um serviço ou evento</option>
+    <!-- Eventos especiais -->
+    <option value="Evento Senac Beauty Day" {% if servico == 'Evento Senac Beauty Day' %}selected{% endif %}>Evento Senac Beauty Day</option>
+    <option value="Evento Conexões (Gestão/TI)" {% if servico == 'Evento Conexões (Gestão/TI)' %}selected{% endif %}>Evento Conexões (Gestão/TI)</option>
+    <!-- Serviços tradicionais -->
+    <option value="Massagem relaxante" {% if servico == 'Massagem relaxante' %}selected{% endif %}>Massagem relaxante</option>
+    <option value="Trança" {% if servico == 'Trança' %}selected{% endif %}>Trança</option>
+    <option value="Designer de Sobrancelhas" {% if servico == 'Designer de Sobrancelhas' %}selected{% endif %}>Designer de Sobrancelhas</option>
+    <option value="Corte de Cabelo" {% if servico == 'Corte de Cabelo' %}selected{% endif %}>Corte de Cabelo</option>
+    <option value="Maquiagem" {% if servico == 'Maquiagem' %}selected{% endif %}>Maquiagem</option>
+    <option value="Gastronomia" {% if servico == 'Gastronomia' %}selected{% endif %}>Gastronomia</option>
+    <option value="Oficina Gastronomia" {% if servico == 'Oficina Gastronomia' %}selected{% endif %}>Oficina Gastronomia</option>
+    <option value="Oficina Tecnologia" {% if servico == 'Oficina Tecnologia' %}selected{% endif %}>Oficina Tecnologia</option>
+    <option value="Oficina Gestão" {% if servico == 'Oficina Gestão' %}selected{% endif %}>Oficina Gestão</option>
+    <option value="Bioimpedância" {% if servico == 'Bioimpedância' %}selected{% endif %}>Bioimpedância</option>
+    <option value="Aferição de Pressão" {% if servico == 'Aferição de Pressão' %}selected{% endif %}>Aferição de Pressão</option>
+    <option value="Teste de Glicemia" {% if servico == 'Teste de Glicemia' %}selected{% endif %}>Teste de Glicemia</option>
+</select>
+{% if 'servico' in form_erros %}
+    <div class="invalid-feedback">⚠️ Selecione um serviço ou evento.</div>
+{% endif %}
+        
         <!-- Termo de Consentimento -->
         <div class="switch-container">
             <label for="toggleTermoConsentimento">
