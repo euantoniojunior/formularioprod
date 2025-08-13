@@ -29,21 +29,24 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-# Modelo da Tabela Inscrições (com campo 'servico')
+# Modelo da Tabela Inscrições
 class Inscricao(db.Model):
     __tablename__ = 'inscricao'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False)
-    cpf = db.Column(db.String(11), nullable=False, unique=True)
+    cpf = db.Column(db.String(11), nullable=False)
     fone = db.Column(db.String(20), nullable=False)
-    servico = db.Column(db.String(100), nullable=True)
+    servico = db.Column(db.String(100), nullable=False)
     ip = db.Column(db.String(50), nullable=False)
     data_hora = db.Column(
         db.String(50),
         nullable=False,
         default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
     )
+
+    # Restrição: CPF + Serviço deve ser único
+    __table_args__ = (db.UniqueConstraint('cpf', 'servico', name='_cpf_servico_uc'),)
 
 
 # Função de validação de CPF
@@ -60,11 +63,12 @@ def validar_cpf(cpf):
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
-# Função para criar coluna 'servico' se não existir
+# Função para criar coluna 'servico' e restrição
 def verificar_e_criar_coluna_servico():
     with app.app_context():
         conn = db.engine.connect()
         try:
+            # Verifica se a coluna 'servico' existe
             result = conn.execute(
                 text("""
                     SELECT column_name 
@@ -76,10 +80,30 @@ def verificar_e_criar_coluna_servico():
                 conn.execute(text("ALTER TABLE inscricao ADD COLUMN servico VARCHAR(100)"))
                 conn.commit()
                 print("✅ Coluna 'servico' criada com sucesso!")
-            else:
-                print("ℹ️ Coluna 'servico' já existe.")
+
+            # Verifica se a restrição única (cpf + servico) existe
+            result = conn.execute(
+                text("""
+                    SELECT constraint_name 
+                    FROM information_schema.table_constraints 
+                    WHERE table_name = 'inscricao' 
+                    AND constraint_name = '_cpf_servico_uc'
+                """)
+            )
+            if not result.fetchone():
+                try:
+                    conn.execute(text("""
+                        ALTER TABLE inscricao 
+                        ADD CONSTRAINT _cpf_servico_uc 
+                        UNIQUE (cpf, servico)
+                    """))
+                    conn.commit()
+                    print("✅ Restrição única (CPF + Serviço) adicionada.")
+                except Exception as e:
+                    print(f"⚠️ A restrição já pode existir: {e}")
+                    conn.rollback()
         except Exception as e:
-            print(f"❌ Erro ao criar coluna: {e}")
+            print(f"❌ Erro ao verificar/criar coluna ou restrição: {e}")
         finally:
             conn.close()
 
@@ -125,6 +149,17 @@ def index():
                                    fone=fone,
                                    servico=servico)
 
+        # Verifica se já está inscrito no mesmo serviço
+        ja_existe = Inscricao.query.filter_by(cpf=cpf, servico=servico).first()
+        if ja_existe:
+            return render_template('form.html',
+                                   erro_cpf="❌ Você já está inscrito neste serviço/evento.",
+                                   nome=nome,
+                                   email=email,
+                                   cpf=cpf,
+                                   fone=fone,
+                                   servico=servico)
+
         ip_usuario = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
         nova_inscricao = Inscricao(
             nome=nome,
@@ -139,15 +174,24 @@ def index():
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
             return redirect(url_for('success'))
-        except IntegrityError:
+        except IntegrityError as e:
             db.session.rollback()
-            return render_template('form.html',
-                                   nome=nome,
-                                   email=email,
-                                   cpf=cpf,
-                                   fone=fone,
-                                   servico=servico,
-                                   form_erros=['cpf_duplicado'])
+            if '_cpf_servico_uc' in str(e):
+                return render_template('form.html',
+                                       erro_cpf="❌ Você já está inscrito neste serviço/evento.",
+                                       nome=nome,
+                                       email=email,
+                                       cpf=cpf,
+                                       fone=fone,
+                                       servico=servico)
+            else:
+                flash("❌ Erro ao salvar dados.", "danger")
+                return render_template('form.html',
+                                       nome=nome,
+                                       email=email,
+                                       cpf=cpf,
+                                       fone=fone,
+                                       servico=servico)
         except Exception as e:
             db.session.rollback()
             flash(f"Erro: {str(e)}", "danger")
@@ -213,7 +257,7 @@ def download_file():
         return redirect(url_for('visualizar_registros'))
 
 
-# Visualizar registros (CORRIGIDO)
+# Visualizar registros
 @app.route('/visualizar', methods=['GET', 'POST'])
 def visualizar_registros():
     if request.method == 'POST':
@@ -226,7 +270,6 @@ def visualizar_registros():
             except Exception as e:
                 db.session.rollback()
                 flash("Erro ao limpar registros.", "danger")
-
         elif request.form.get('excluir'):
             id_excluir = request.form.get('excluir')
             db.session.close()
