@@ -108,11 +108,25 @@ def index():
                                    fone=fone,
                                    servico=servico)
 
-        # ✅ VALIDAÇÃO FORÇADA NO CÓDIGO: CPF + Serviço
-        ja_existe = Inscricao.query.filter_by(cpf=cpf, servico=servico).first()
-        if ja_existe:
+        # ✅ FORÇA NOVA CONEXÃO: fecha a sessão antes de qualquer consulta
+        db.session.close()
+
+        # Agora verifica se já existe (CPF + Serviço)
+        try:
+            ja_existe = Inscricao.query.filter_by(cpf=cpf, servico=servico).first()
+            if ja_existe:
+                return render_template('form.html',
+                                       erro_cpf="❌ Você já está inscrito neste serviço/evento.",
+                                       nome=nome,
+                                       email=email,
+                                       cpf=cpf,
+                                       fone=fone,
+                                       servico=servico)
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Erro ao verificar duplicidade: {e}")
+            flash("❌ Erro de conexão. Tente novamente.", "danger")
             return render_template('form.html',
-                                   erro_cpf="❌ Você já está inscrito neste serviço/evento.",
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
@@ -135,9 +149,8 @@ def index():
             return redirect(url_for('success'))
         except IntegrityError:
             db.session.rollback()
-            # Se falhar, pode ser por race condition, mas a validação acima já evita
             return render_template('form.html',
-                                   erro_cpf="❌ Erro: Você já está inscrito neste serviço.",
+                                   erro_cpf="❌ Você já está inscrito neste serviço/evento.",
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
@@ -145,8 +158,8 @@ def index():
                                    servico=servico)
         except Exception as e:
             db.session.rollback()
-            print(f"❌ Erro inesperado: {e}")
-            flash("❌ Erro ao salvar dados.", "danger")
+            print(f"❌ Erro inesperado ao salvar: {e}")
+            flash("❌ Erro ao salvar. Tente novamente.", "danger")
             return render_template('form.html',
                                    nome=nome,
                                    email=email,
@@ -254,3 +267,4 @@ def limpar_tabelas():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
+
