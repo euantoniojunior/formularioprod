@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-for-dev')
 
-# Configuração do Banco de Dados (mantida igual ao original)
+# Configuração do Banco de Dados
 uri = os.getenv("DATABASE_URL", "sqlite:///local.db")
 if uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
@@ -35,7 +35,7 @@ class Inscricao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False)
-    cpf = db.Column(db.String(11), nullable=False)  # Removido unique=True
+    cpf = db.Column(db.String(11), nullable=False)  # Sem unique=True
     fone = db.Column(db.String(20), nullable=False)
     servico = db.Column(db.String(100), nullable=False)
     ip = db.Column(db.String(50), nullable=False)
@@ -44,9 +44,6 @@ class Inscricao(db.Model):
         nullable=False,
         default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
     )
-
-    # Restrição: CPF + Serviço devem ser únicos (não permite duplicar no mesmo serviço)
-    __table_args__ = (db.UniqueConstraint('cpf', 'servico', name='_cpf_servico_uc'),)
 
 
 # Função de validação de CPF
@@ -63,55 +60,17 @@ def validar_cpf(cpf):
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
-# Função para criar coluna 'servico' e restrição única, se não existirem
-def verificar_e_criar_coluna_servico():
-    with app.app_context():
-        conn = db.engine.connect()
-        try:
-            # Verifica se a coluna 'servico' existe
-            result = conn.execute(
-                text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'inscricao' AND column_name = 'servico'
-                """)
-            )
-            if not result.fetchone():
-                conn.execute(text("ALTER TABLE inscricao ADD COLUMN servico VARCHAR(100)"))
-                conn.commit()
-                print("✅ Coluna 'servico' criada com sucesso!")
-
-            # Verifica se a restrição única (cpf + servico) já existe
-            result = conn.execute(
-                text("""
-                    SELECT constraint_name 
-                    FROM information_schema.table_constraints 
-                    WHERE table_name = 'inscricao' 
-                    AND constraint_name = '_cpf_servico_uc'
-                """)
-            )
-            if not result.fetchone():
-                try:
-                    conn.execute(text("""
-                        ALTER TABLE inscricao 
-                        ADD CONSTRAINT _cpf_servico_uc 
-                        UNIQUE (cpf, servico)
-                    """))
-                    conn.commit()
-                    print("✅ Restrição única (CPF + Serviço) adicionada.")
-                except Exception as e:
-                    print(f"⚠️ A restrição já pode existir: {e}")
-                    conn.rollback()
-        except Exception as e:
-            print(f"❌ Erro ao verificar/criar coluna ou restrição: {e}")
-        finally:
-            conn.close()
-
-
-# Cria tabelas e verifica coluna
+# Garante que a tabela exista e remove restrições antigas
 with app.app_context():
     db.create_all()
-    verificar_e_criar_coluna_servico()
+
+    # Remove qualquer restrição antiga de unique no CPF (opcional)
+    try:
+        db.session.execute(text("ALTER TABLE inscricao DROP CONSTRAINT IF EXISTS inscricao_cpf_key"))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"ℹ️ Nenhuma restrição antiga de CPF para remover: {e}")
 
 
 # Rota principal
@@ -124,7 +83,6 @@ def index():
         fone = request.form.get('fone')
         servico = request.form.get('servico')
 
-        # Validação de campos obrigatórios
         form_erros = []
         if not nome: form_erros.append('nome')
         if not email: form_erros.append('email')
@@ -150,7 +108,7 @@ def index():
                                    fone=fone,
                                    servico=servico)
 
-        # Verifica se já está inscrito no mesmo serviço
+        # ✅ VALIDAÇÃO FORÇADA NO CÓDIGO: CPF + Serviço
         ja_existe = Inscricao.query.filter_by(cpf=cpf, servico=servico).first()
         if ja_existe:
             return render_template('form.html',
@@ -175,30 +133,20 @@ def index():
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
             return redirect(url_for('success'))
-        except IntegrityError as e:
+        except IntegrityError:
             db.session.rollback()
-            error_msg = str(e)
-            print(f"❌ Erro de integridade: {error_msg}")  # Para depuração
-            if '_cpf_servico_uc' in error_msg or 'violates unique constraint' in error_msg:
-                return render_template('form.html',
-                                       erro_cpf="❌ Você já está inscrito neste serviço/evento.",
-                                       nome=nome,
-                                       email=email,
-                                       cpf=cpf,
-                                       fone=fone,
-                                       servico=servico)
-            else:
-                flash("❌ Erro ao salvar dados.", "danger")
-                return render_template('form.html',
-                                       nome=nome,
-                                       email=email,
-                                       cpf=cpf,
-                                       fone=fone,
-                                       servico=servico)
+            # Se falhar, pode ser por race condition, mas a validação acima já evita
+            return render_template('form.html',
+                                   erro_cpf="❌ Erro: Você já está inscrito neste serviço.",
+                                   nome=nome,
+                                   email=email,
+                                   cpf=cpf,
+                                   fone=fone,
+                                   servico=servico)
         except Exception as e:
             db.session.rollback()
             print(f"❌ Erro inesperado: {e}")
-            flash(f"❌ Erro ao salvar: {str(e)}", "danger")
+            flash("❌ Erro ao salvar dados.", "danger")
             return render_template('form.html',
                                    nome=nome,
                                    email=email,
