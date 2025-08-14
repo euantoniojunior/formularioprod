@@ -25,13 +25,17 @@ if uri.startswith("postgresql://") and "?sslmode=" not in uri:
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Tempo de expiração da sessão (1 hora)
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # segundos
+
 # Inicializa o banco
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# Credenciais do admin (senha em hash)
+# Credenciais do admin (senha armazenada em hash)
 ADMIN_USER = "admin"
 ADMIN_PASS_HASH = hashlib.sha256(os.getenv("ADMIN_PASSWORD", "senac123").encode()).hexdigest()
+
 
 # Modelo da Tabela Inscrições
 class Inscricao(db.Model):
@@ -91,36 +95,13 @@ def login():
 
         if username == ADMIN_USER and pass_hash == ADMIN_PASS_HASH:
             session['logged_in'] = True
+            session.permanent = True  # Ativa expiração
             flash("✅ Login realizado com sucesso!", "success")
             return redirect(url_for('visualizar_registros'))
         else:
             flash("❌ Usuário ou senha inválidos.", "danger")
 
-    return '''
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; padding: 50px; }
-        .container { background: white; width: 90%; max-width: 400px; margin: auto; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        button { background: #F39200; color: white; border: none; cursor: pointer; }
-        button:hover { background: #D17A00; }
-        .flash { color: #721c24; background: #f8d7da; padding: 10px; border-radius: 5px; margin: 10px 0; }
-    </style>
-    <div class="container">
-        <h2>Login Admin</h2>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="flash">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-        <form method="post">
-            <input type="text" name="username" placeholder="Usuário" required>
-            <input type="password" name="password" placeholder="Senha" required>
-            <button type="submit">Entrar</button>
-        </form>
-    </div>
-    '''
+    return render_template('login.html')
 
 
 # Rota de logout
