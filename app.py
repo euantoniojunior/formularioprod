@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, render_template, send_file, flash, redirect, url_for
+from flask import Flask, request, render_template, send_file, flash, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import pandas as pd
@@ -8,6 +8,8 @@ import pytz
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 from sqlalchemy import text
+from functools import wraps
+import hashlib
 
 load_dotenv()
 
@@ -24,9 +26,16 @@ if uri.startswith("postgresql://") and "?sslmode=" not in uri:
 app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Tempo de expiração da sessão (1 hora)
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600
+
 # Inicializa o banco
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+# Credenciais do admin
+ADMIN_USER = "admin"
+ADMIN_PASS_HASH = hashlib.sha256(os.getenv("ADMIN_PASSWORD", "senac123").encode()).hexdigest()
 
 
 # Modelo da Tabela Inscrições
@@ -45,7 +54,7 @@ class Inscricao(db.Model):
         default=lambda: datetime.now(pytz.timezone("America/Rio_Branco")).strftime("%Y-%m-%d %H:%M:%S")
     )
 
-    # Restrição: CPF + Serviço devem ser únicos
+    # Restrição: CPF + Serviço únicos
     __table_args__ = (db.UniqueConstraint('cpf', 'servico', name='_cpf_servico_uc'),)
 
 
@@ -63,12 +72,11 @@ def validar_cpf(cpf):
     return cpf[-2:] == f"{digito1}{digito2}"
 
 
-# Função para criar coluna 'servico' e restrição única, se não existirem
+# Função para criar coluna 'servico' e restrição única
 def verificar_e_criar_coluna_servico():
     with app.app_context():
         conn = db.engine.connect()
         try:
-            # Verifica se a coluna 'servico' existe
             result = conn.execute(
                 text("""
                     SELECT column_name 
@@ -81,7 +89,6 @@ def verificar_e_criar_coluna_servico():
                 conn.commit()
                 print("✅ Coluna 'servico' criada com sucesso!")
 
-            # Verifica se a restrição única (cpf + servico) já existe
             result = conn.execute(
                 text("""
                     SELECT constraint_name 
@@ -114,6 +121,43 @@ with app.app_context():
     verificar_e_criar_coluna_servico()
 
 
+# Decorador para exigir login
+def login_requerido(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Rota de login
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        pass_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        if username == ADMIN_USER and pass_hash == ADMIN_PASS_HASH:
+            session['logged_in'] = True
+            session.permanent = True
+            flash("✅ Login realizado com sucesso!", "success")
+            return redirect(url_for('visualizar_registros'))
+        else:
+            flash("❌ Usuário ou senha inválidos.", "danger")
+
+    return render_template('login.html')
+
+
+# Rota de logout
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    flash("Você saiu da área administrativa.", "info")
+    return redirect(url_for('index'))
+
+
 # Rota principal
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -125,29 +169,35 @@ def index():
         servico = request.form.get('servico')
 
         # Validação de campos obrigatórios
-        if not nome or not email or not cpf or not fone or not servico:
-            flash("⚠️ Todos os campos são obrigatórios.", "danger")
+        form_erros = []
+        if not nome: form_erros.append('nome')
+        if not email: form_erros.append('email')
+        if not cpf: form_erros.append('cpf')
+        if not fone: form_erros.append('fone')
+        if not servico: form_erros.append('servico')
+
+        if form_erros:
             return render_template('form.html',
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
                                    fone=fone,
-                                   servico=servico)
+                                   servico=servico,
+                                   form_erros=form_erros)
 
         if not validar_cpf(cpf):
-            erro_cpf = "❌ CPF inválido. Deve ter 11 dígitos válidos."
             return render_template('form.html',
-                                   erro_cpf=erro_cpf,
+                                   erro_cpf="❌ CPF inválido.",
                                    nome=nome,
                                    email=email,
                                    cpf=cpf,
                                    fone=fone,
                                    servico=servico)
 
-        # Força nova conexão para evitar EOF
+        # Força nova conexão
         db.session.close()
 
-        # Verifica se já está inscrito no mesmo serviço
+        # Verifica duplicidade CPF + Serviço
         ja_existe = Inscricao.query.filter_by(cpf=cpf, servico=servico).first()
         if ja_existe:
             return render_template('form.html',
@@ -171,28 +221,18 @@ def index():
             db.session.add(nova_inscricao)
             db.session.commit()
             flash("✅ Inscrição realizada com sucesso!", "success")
-            return redirect(url_for('index'))
-        except IntegrityError as e:
+            return redirect(url_for('success'))
+        except IntegrityError:
             db.session.rollback()
-            if '_cpf_servico_uc' in str(e):
-                return render_template('form.html',
-                                       erro_cpf="❌ Você já está inscrito neste serviço/evento.",
-                                       nome=nome,
-                                       email=email,
-                                       cpf=cpf,
-                                       fone=fone,
-                                       servico=servico)
-            else:
-                flash("❌ Erro ao salvar dados.", "danger")
-                return render_template('form.html',
-                                       nome=nome,
-                                       email=email,
-                                       cpf=cpf,
-                                       fone=fone,
-                                       servico=servico)
+            return render_template('form.html',
+                                   erro_cpf="❌ Você já está inscrito neste serviço/evento.",
+                                   nome=nome,
+                                   email=email,
+                                   cpf=cpf,
+                                   fone=fone,
+                                   servico=servico)
         except Exception as e:
             db.session.rollback()
-            print(f"❌ Erro inesperado: {e}")
             flash(f"❌ Erro ao salvar: {str(e)}", "danger")
             return render_template('form.html',
                                    nome=nome,
@@ -256,8 +296,9 @@ def download_file():
         return redirect(url_for('visualizar_registros'))
 
 
-# Visualizar registros
+# Visualizar registros (com autenticação)
 @app.route('/visualizar', methods=['GET', 'POST'])
+@login_requerido
 def visualizar_registros():
     if request.method == 'POST':
         if request.form.get('limpar_tudo'):
